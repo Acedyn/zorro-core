@@ -1,4 +1,5 @@
 from typing import List
+
 import pytest
 
 from zorro_core.tools.action import Action, ActionCommand
