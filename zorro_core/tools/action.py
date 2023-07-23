@@ -10,6 +10,8 @@ from typing import (
 )
 import asyncio
 
+import marshmallow_dataclass
+
 from .tool_base import LayeredTool, ToolType
 from .command import Command
 from zorro_core.utils.logger import logger
@@ -124,3 +126,5 @@ class Action(LayeredTool):
     async def cancel(self):
         logger.debug("Canceling %s with %s", self.name, callable)
         await self.traverse(self._cancel_child)
+
+ActionSchema = marshmallow_dataclass.class_schema(Action)()

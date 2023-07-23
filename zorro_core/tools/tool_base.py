@@ -1,5 +1,5 @@
 from __future__ import annotations
-from uuid import uuid4
+from uuid import uuid4, UUID
 from dataclasses import dataclass, field
 from typing import Dict, Union, List
 from enum import IntEnum
@@ -38,7 +38,9 @@ class ToolBase(ABC):
     a config and used to expose custom functionalities
     """
 
+    id: UUID = field(init=False)
     name: str
+    label: str = field(default="", repr=False)
     type: ToolType = field(init=False)
     inputs: Dict[str, Socket] = field(default_factory=dict, repr=False)
     output: Dict[str, Socket] = field(default_factory=dict, repr=False)
@@ -48,6 +50,8 @@ class ToolBase(ABC):
 
     def __post_init__(self):
         self.id = uuid4()
+        if not self.label:
+            self.label = self.name.replace("_", " ").title()
 
     @abstractmethod
     async def execute(self):
