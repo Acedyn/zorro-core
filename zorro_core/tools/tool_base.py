@@ -1,7 +1,7 @@
 from __future__ import annotations
 from uuid import uuid4
 from dataclasses import dataclass, field
-from typing import Dict, Union, Callable, Awaitable, TypeVar, List, AsyncGenerator
+from typing import Dict, Union, List
 from enum import IntEnum
 from abc import ABC, abstractmethod
 
@@ -38,22 +38,23 @@ class ToolBase(ABC):
     a config and used to expose custom functionalities
     """
 
-    T = TypeVar("T")
-
     name: str
-    type: ToolType
-    inputs: Dict[str, Socket] = field(default_factory=dict)
-    output: Dict[str, Socket] = field(default_factory=dict)
-    hidden: bool = field(default=False)
-    tooltip: str = field(default="No tooltip available")
+    type: ToolType = field(init=False)
+    inputs: Dict[str, Socket] = field(default_factory=dict, repr=False)
+    output: Dict[str, Socket] = field(default_factory=dict, repr=False)
+    hidden: bool = field(default=False, repr=False)
+    tooltip: str = field(default="No tooltip available", repr=False)
+    logs: List[str] = field(default_factory=list, repr=False)
 
     def __post_init__(self):
         self.id = uuid4()
 
     @abstractmethod
-    async def traverse(
-        self, task: Callable[[ToolBase], Awaitable[T]]
-    ) -> AsyncGenerator[T, None]:
+    async def execute(self):
+        pass
+
+    @abstractmethod
+    async def cancel(self):
         pass
 
 
@@ -64,4 +65,4 @@ class LayeredTool(ToolBase):
     together will form one final config.
     """
 
-    inherit: List[str] = field(default_factory=list)
+    inherit: List[str] = field(default_factory=list, repr=False)

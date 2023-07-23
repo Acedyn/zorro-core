@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 
 Data = Union[None, int, str, bool, List[object], Dict[str, object]]
 
-
 @dataclass
 class Base:
     id: str
