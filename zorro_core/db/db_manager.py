@@ -1,0 +1,20 @@
+from tortoise import Tortoise
+from typing import Literal
+
+from zorro_core.main.settings import DBSettings
+
+
+async def init_db(settigns: DBSettings):
+    await Tortoise.init(
+        db_url=settigns.url,
+        modules={"models": ["zorro_core.db.entity", "zorro_core.db.user"]},
+    )
+
+
+async def migrate():
+    await Tortoise.generate_schemas()
+
+
+async def cli_handler(operation: Literal["migrate", "reset", "create-admin"]):
+    if operation == "migrate":
+        await migrate()

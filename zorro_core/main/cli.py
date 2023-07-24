@@ -1,6 +1,9 @@
 import argparse
 
+from db import db_manager
+
 HANDLERS_MAPPING = {
+    "db": {}
     # "action": handlers.action_handler,
     # "command": handlers.command_handler,
     # "launch": handlers.launch_handler,
@@ -21,6 +24,13 @@ def main():
         default=[],
         nargs="*",
     )
+    parser.add_argument(
+        "--db-url",
+        "-d",
+        help="The url of the sqlite database",
+        type=str,
+        required=False,
+    )
 
     subparsers = parser.add_subparsers(
         help="The action to perform under the given context", dest="subcommand"
@@ -34,14 +44,7 @@ def main():
     db_parser.add_argument(
         "operation",
         help="The operation to perform on the database",
-        choices=['migrate', 'reset', "create-admin"]
-    )
-    db_parser.add_argument(
-        "--url",
-        "-u",
-        help="The url of the sqlite database",
-        type=str,
-        default="sqlite://db.sqlite3"
+        choices=["migrate", "reset", "create-admin"],
     )
 
     # Tool parser: global parameters to actions, commands, events...
@@ -106,7 +109,6 @@ def main():
         help="The name of the program to start",
         type=str,
     )
-
     launcher_parser.add_argument(
         "--file",
         "-f",
