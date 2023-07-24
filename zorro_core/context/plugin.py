@@ -1,12 +1,12 @@
 from __future__ import annotations
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Dict, List, cast, Optional
+from typing import Dict, List, Optional
 from uuid import uuid4, UUID
-import json
 
 import marshmallow_dataclass
-import aiofiles
+
+from zorro_core.utils.deserialize import load_from_schema
 
 @dataclass
 class PluginPaths:
@@ -21,13 +21,25 @@ class PluginTools:
     widgets: List[str] = field(default_factory=list)
 
 @dataclass
+class ClientConfig:
+    name: str
+    path: str
+
+@dataclass
 class Plugin:
+    """
+    Plugins register a set of tools, environment variables and clients.
+    A set of tools will define what interactions are available or not.
+    """
+
     id: UUID = field(init=False)
     name: str
     label: str = field(default="")
+    require: List[str] = field(default_factory=list)
     env: Dict[str, str] = field(default_factory=dict)
     paths: PluginPaths = field(default_factory=PluginPaths)
     tools: PluginTools = field(default_factory=PluginTools)
+    clients: List[ClientConfig] = field(default_factory=list)
 
     def __post_init__(self):
         self.id = uuid4()
@@ -36,19 +48,6 @@ class Plugin:
 
     @staticmethod
     async def load(path: Path) -> Optional[Plugin]:
-        if not path.exists():
-            return Plugin("")
-
-        loaded_config = {}
-        if path.suffix in [".yml", ".yaml"]:
-            pass
-        elif path.suffix in [".json"]:
-            async with aiofiles.open(path) as config:
-                loaded_config = json.loads(await config.read())
-        else:
-            return Plugin("")
-
-        loaded_plugin = cast(Optional[Plugin], PluginSchema.load(loaded_config))
-        return loaded_plugin
+        return await load_from_schema(path, PluginSchema, Plugin)
 
 PluginSchema = marshmallow_dataclass.class_schema(Plugin)()

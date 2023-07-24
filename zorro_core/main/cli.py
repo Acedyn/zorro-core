@@ -15,18 +15,33 @@ def main():
     # Root parser: global parameter used to define the context and others
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument(
-        "-p", "--project", help="list of the entity IDs to select", type=str
-    )
-    parser.add_argument(
         "-e",
         "--entities",
         help="list of the entity IDs to select",
-        default=None,
+        default=[],
         nargs="*",
     )
 
     subparsers = parser.add_subparsers(
         help="The action to perform under the given context", dest="subcommand"
+    )
+
+    # DB parser: manage the database
+    db_parser = subparsers.add_parser(
+        "db",
+        help="Manage the local database",
+    )
+    db_parser.add_argument(
+        "operation",
+        help="The operation to perform on the database",
+        choices=['migrate', 'reset', "create-admin"]
+    )
+    db_parser.add_argument(
+        "--url",
+        "-u",
+        help="The url of the sqlite database",
+        type=str,
+        default="sqlite://db.sqlite3"
     )
 
     # Tool parser: global parameters to actions, commands, events...
@@ -102,9 +117,7 @@ def main():
 
     args = vars(parser.parse_args())
     subcommand = args.pop("subcommand", None)
-    if subcommand is not None:
-        # Execute the appropriate handler according to the subparser
-        HANDLERS_MAPPING[subcommand](**args)
+    print(subcommand, args)
 
 
 if __name__ == "__main__":

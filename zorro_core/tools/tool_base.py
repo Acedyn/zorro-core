@@ -1,7 +1,7 @@
 from __future__ import annotations
 from uuid import uuid4, UUID
 from dataclasses import dataclass, field
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Optional
 from enum import IntEnum
 from abc import ABC, abstractmethod
 
@@ -61,6 +61,10 @@ class ToolBase(ABC):
     async def cancel(self):
         pass
 
+    @staticmethod
+    @abstractmethod
+    async def resolve(name: str) -> Optional[ToolBase]:
+        pass
 
 @dataclass
 class LayeredTool(ToolBase):
