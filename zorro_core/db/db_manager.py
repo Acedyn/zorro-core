@@ -15,6 +15,10 @@ async def migrate():
     await Tortoise.generate_schemas()
 
 
+async def drop():
+    await Tortoise._drop_databases()
+
+
 async def cli_handler(operation: Literal["migrate", "reset", "create-admin"]):
     if operation == "migrate":
         await migrate()
