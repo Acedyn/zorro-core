@@ -24,7 +24,7 @@ Tools can be composed of each other, there is higher level type of tools than ot
 
 ## The structure
 
-- **context**: Datatypes and providers for context resolution according to the context query
+- **context**: Datatypes and context resolution according to a context query
 - **tools**: Datastructures and execution logic related to all the type of tools
 - **api**
 - **app**:
@@ -61,7 +61,7 @@ command in the environment
 The static type checking is done via mypy
 
 ```bash
-poetry run mypy zorro-core --ignore-missing-imports --strict
+poetry run mypy zorro-core --ignore-missing-imports --strict .
 ```
 
 ### Unit tests
@@ -69,5 +69,5 @@ poetry run mypy zorro-core --ignore-missing-imports --strict
 The unit tests are done via pytest
 
 ```bash
-poetry run mypy pytest
+poetry run pytest .
 ```
