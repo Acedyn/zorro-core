@@ -127,4 +127,8 @@ class Action(LayeredTool):
         logger.debug("Canceling %s with %s", self.name, callable)
         await self.traverse(self._cancel_child)
 
+    @staticmethod
+    async def resolve(name: str) -> Optional[Action]:
+        return None
+
 ActionSchema = marshmallow_dataclass.class_schema(Action)()

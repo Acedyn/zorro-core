@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Coroutine, Callable, TypeVar
 
@@ -28,3 +29,7 @@ class Command(ToolBase):
 
     async def cancel(self):
         logger.debug("Canceling %s with %s", self.name, callable)
+
+    @staticmethod
+    async def resolve(name: str) -> Optional[Command]:
+        return None
