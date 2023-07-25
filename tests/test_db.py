@@ -3,7 +3,7 @@ import pytest_asyncio
 
 from zorro_core.db import db_manager
 from zorro_core.db.entity import EntityType, Entity
-from zorro_core.main.settings import DBSettings
+from zorro_core.main.config import DBConfig
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -12,7 +12,7 @@ async def init_db():
     Initialize the db and clear it right before deletion
     """
 
-    await db_manager.init_db(DBSettings(url="sqlite://:memory:"))
+    await db_manager.init_db(DBConfig(url="sqlite://:memory:"))
     await db_manager.migrate()
 
     yield True

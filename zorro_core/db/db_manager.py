@@ -1,10 +1,10 @@
 from tortoise import Tortoise
 from typing import Literal
 
-from zorro_core.main.settings import DBSettings
+from zorro_core.main.config import DBConfig
 
 
-async def init_db(settigns: DBSettings):
+async def init_db(settigns: DBConfig):
     await Tortoise.init(
         db_url=settigns.url,
         modules={"models": ["zorro_core.db.entity", "zorro_core.db.user"]},
