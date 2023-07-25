@@ -1,27 +1,27 @@
 from pathlib import Path
-import json
-from typing import TypeVar, cast, Optional, Type
+from typing import TypeVar, Optional, Type
 
 import aiofiles
-from marshmallow import Schema
+from pydantic import BaseModel, TypeAdapter
 
-T = TypeVar("T")
+T = TypeVar("T", bound=BaseModel)
 
-async def load_from_schema(path: Path, schema: Schema, _: Type[T]) -> Optional[T]:
+
+async def load_from_schema(path: Path, model: Type[T]) -> Optional[T]:
     """
-    Load a json or a yaml file into its dataclass using marshmallow schema.
+    Load a json or a yaml file into its dataclass using pydantic schema.
     """
     if not path.exists():
         return None
 
     # YAML and JSON are supported
-    loaded_config = {}
+    loaded_data = ""
     if path.suffix in [".yml", ".yaml"]:
         pass
     elif path.suffix in [".json"]:
         async with aiofiles.open(path) as config:
-            loaded_config = json.loads(await config.read())
+            loaded_data = await config.read()
     else:
         return None
 
-    return cast(T, schema.load(loaded_config))
+    return TypeAdapter(model).validate_json(loaded_data)

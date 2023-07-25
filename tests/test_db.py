@@ -5,19 +5,18 @@ from zorro_core.db import db_manager
 from zorro_core.db.entity import EntityType, Entity
 from zorro_core.main.settings import DBSettings
 
+
 @pytest_asyncio.fixture(autouse=True)
 async def init_db():
     """
     Initialize the db and clear it right before deletion
     """
 
-    print("BEFORE")
     await db_manager.init_db(DBSettings(url="sqlite://:memory:"))
     await db_manager.migrate()
 
     yield True
 
-    print("AFTER")
     await db_manager.drop()
 
 
@@ -27,7 +26,6 @@ async def test_db_entities():
     Test the entities and entity types creation and relations
     """
 
-    print("RUNNING")
     project_type = EntityType(name="project", label="Project")
     await project_type.save()
     episode_type = EntityType(name="episode", label="Episode")
