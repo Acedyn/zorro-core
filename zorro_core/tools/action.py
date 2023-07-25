@@ -1,5 +1,4 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
 from typing import (
     Dict,
     Union,
@@ -7,10 +6,11 @@ from typing import (
     Optional,
     Coroutine,
     Set,
+    Any
 )
 import asyncio
 
-import marshmallow_dataclass
+from pydantic import Field
 
 from .tool_base import LayeredTool, ToolType
 from .command import Command
@@ -18,33 +18,31 @@ from zorro_core.utils.logger import logger
 
 ActionChild = Union["Action", "ActionCommand"]
 
-@dataclass
 class ActionCommand(Command):
     """
     Commands that are linked to an action should have an upstream field
     used to declare the dependencies
     """
 
-    upstream: Optional[str] = field(default=None)
+    upstream: Optional[str] = Field(default=None)
 
     async def traverse(self, task: Callable[[ActionChild], Coroutine]):
 
         logger.debug("Traversing %s with %s", self, callable)
         await task(self)
 
-@dataclass
 class Action(LayeredTool):
     """
     An action holds groups of subactions and commands.
     It allows to chain and organize multiple commands into a dependency graph
     """
 
-    children: Dict[str, ActionChild] = field(default_factory=dict, repr=False)
-    upstream: Optional[str] = field(default=None)
+    children: Dict[str, ActionChild] = Field(default_factory=dict, repr=False)
+    upstream: Optional[str] = Field(default=None)
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.type = ToolType.ACTION
+    def __init__(self, **data: Any):
+        data["type"] = ToolType.ACTION
+        super().__init__(**data)
 
     async def _traverse_ready_children(
         self,
@@ -130,5 +128,3 @@ class Action(LayeredTool):
     @staticmethod
     async def resolve(name: str) -> Optional[Action]:
         return None
-
-ActionSchema = marshmallow_dataclass.class_schema(Action)()
