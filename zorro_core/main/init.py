@@ -1,13 +1,13 @@
 import asyncio
 from typing import Coroutine
 
-from .settings import get_settings
+from .config import get_config
 from zorro_core.db.db_manager import init_db
 
 
 async def async_init_app(app_task: Coroutine):
-    app_settings = await get_settings()
-    await init_db(app_settings.db)
+    app_config = await get_config()
+    await init_db(app_config.db)
 
     await app_task
 
