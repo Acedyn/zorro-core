@@ -1,28 +1,27 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Optional, Coroutine, Callable, TypeVar
+from typing import Optional, TypeVar, Any
+
+from pydantic import BaseModel, Field
 
 from .tool_base import ToolBase, ToolType
 from zorro_core.utils.logger import logger
 
+T = TypeVar("T")
 
-@dataclass
-class ClientResolver:
-    key: str = field(default="")
+class ClientResolver(BaseModel):
+    key: str = Field(default="")
 
 
-@dataclass
 class Command(ToolBase):
     """
     A command is a task that will be sent to a client to be executed.
     """
-    T = TypeVar("T")
 
-    client: ClientResolver = field(default_factory=ClientResolver)
+    client: ClientResolver = Field(default_factory=ClientResolver)
 
-    def __post_init__(self):
-        super().__post_init__()
-        self.type = ToolType.COMMAND
+    def __init__(self, **data: Any):
+        data["type"] = ToolType.COMMAND
+        super().__init__(**data)
 
     async def execute(self):
         logger.debug("Executing %s with %s", self.name, callable)
