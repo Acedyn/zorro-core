@@ -14,4 +14,4 @@ async def test_plugin_load():
 
     assert isinstance(plugin, Plugin)
     assert plugin.name == "foo"
-    assert plugin.version == "3.2.0"
+    assert plugin.version == "3.2"

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from uuid import uuid4, UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from zorro_core.utils.deserialize import patch_model_from_file
 
@@ -33,6 +33,7 @@ class Plugin(BaseModel):
 
     name: str
     version: str
+    path: Path
     id: UUID = Field(default_factory=uuid4)
     label: str = Field(default="")
     require: List[str] = Field(default_factory=list)
@@ -46,29 +47,8 @@ class Plugin(BaseModel):
         if not self.label:
             self.label = self.name.replace("_", " ").title()
 
-    @field_validator("version")
-    def validate_version(cls, value: str):
-        """
-        The version should follow the pattern <MAJOR>.<MINOR>.<PATCH>
-        """
-
-        splitted_value = value.split(".")
-        if any(not value.isdigit() for value in splitted_value):
-            raise ValueError(
-                "Version should be composed of digits separated by dots (ex: 3.8.12)"
-            )
-        if len(splitted_value) > 3:
-            raise ValueError(
-                "Version should not have more than than 3 components (ex: 3.8.12)"
-            )
-
-        if len(splitted_value) < 2:
-            splitted_value.append("0")
-
-        if len(splitted_value) < 3:
-            splitted_value.append("0")
-
-        return ".".join(splitted_value)
+    async def reload(self):
+        await patch_model_from_file(self, self.path, Plugin)
 
     @staticmethod
     async def load_bare(path: Path) -> Plugin:
@@ -77,9 +57,10 @@ class Plugin(BaseModel):
         """
         splited_name = path.stem.split("@")
         name, version = splited_name if len(splited_name) == 2 else (path.stem, "0.0.0")
-        return Plugin(name=name, version=version)
+        return Plugin(name=name, version=version, path=path)
 
     @classmethod
     async def load(cls, path: Path) -> Optional[Plugin]:
         plugin = await cls.load_bare(path)
-        return await patch_model_from_file(plugin, path, Plugin)
+        await plugin.reload()
+        return plugin
