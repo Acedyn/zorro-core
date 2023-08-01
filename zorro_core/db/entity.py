@@ -10,7 +10,9 @@ class EntityType(BaseModel):
     """
 
     name = fields.CharField(null=False, max_length=100, unique=True)
-    parent = fields.ForeignKeyField("models.EntityType", related_name="children", null=True)
+    parent = fields.ForeignKeyField(
+        "models.EntityType", related_name="children", null=True
+    )
     path_template = fields.CharField(max_length=255, null=True)
 
     class Meta:

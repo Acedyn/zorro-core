@@ -8,6 +8,7 @@ from zorro_core.utils.logger import logger
 
 T = TypeVar("T")
 
+
 class ClientResolver(BaseModel):
     key: str = Field(default="")
 

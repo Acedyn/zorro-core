@@ -63,6 +63,7 @@ class ToolBase(BaseModel, ABC):
     async def resolve(name: str) -> Optional[ToolBase]:
         pass
 
+
 class LayeredTool(ToolBase):
     """
     Some tools can be composed of multiple config that chained

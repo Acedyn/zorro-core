@@ -5,31 +5,47 @@ import pytest
 from zorro_core.tools.action import Action, ActionCommand
 from zorro_core.tools.tool_base import ToolBase
 
+
 @pytest.mark.asyncio
 async def test_action_traverse():
     # The names must follow the expected order of execution alphabetically
     # if two children are expected to run concurently you can differentiate
     # them with a '-' as a separator
-    dummy_action = Action(name="0-A", children={
-        "00-A": Action(name="00-A", children={
-            "000-A": ActionCommand(name="000-A"),
-            "001-A": ActionCommand(name="001-A", upstream="00-A"),
-            "002-A": ActionCommand(name="002-A", upstream="01-A"),
-            "002-B": Action(name="002-B", upstream="01-A", children={
-                "0020-A": ActionCommand(name="0020-A"),
-                "0020-B": ActionCommand(name="0020-B"),
-                }),
-            "002-C": ActionCommand(name="002-A", upstream="01-A"),
-            "002-D": ActionCommand(name="002-A", upstream="01-A"),
-            }),
-        "01-A": Action(name="01-A", upstream="0-A", children={
-            "010-A": ActionCommand(name="010-A"),
-            "011-A": ActionCommand(name="011-A", upstream="10-A"),
-            }),
-        "01-B": ActionCommand(name="01-B", upstream="0-A"),
-        })
+    dummy_action = Action(
+        name="0-A",
+        children={
+            "00-A": Action(
+                name="00-A",
+                children={
+                    "000-A": ActionCommand(name="000-A"),
+                    "001-A": ActionCommand(name="001-A", upstream="00-A"),
+                    "002-A": ActionCommand(name="002-A", upstream="01-A"),
+                    "002-B": Action(
+                        name="002-B",
+                        upstream="01-A",
+                        children={
+                            "0020-A": ActionCommand(name="0020-A"),
+                            "0020-B": ActionCommand(name="0020-B"),
+                        },
+                    ),
+                    "002-C": ActionCommand(name="002-A", upstream="01-A"),
+                    "002-D": ActionCommand(name="002-A", upstream="01-A"),
+                },
+            ),
+            "01-A": Action(
+                name="01-A",
+                upstream="0-A",
+                children={
+                    "010-A": ActionCommand(name="010-A"),
+                    "011-A": ActionCommand(name="011-A", upstream="10-A"),
+                },
+            ),
+            "01-B": ActionCommand(name="01-B", upstream="0-A"),
+        },
+    )
 
     traversal_history: List[str] = []
+
     async def traverse_test(tool: ToolBase):
         traversal_history.append(tool.name)
         return tool.name, tool
