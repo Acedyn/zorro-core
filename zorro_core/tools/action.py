@@ -1,13 +1,5 @@
 from __future__ import annotations
-from typing import (
-    Dict,
-    Union,
-    Callable,
-    Optional,
-    Coroutine,
-    Set,
-    Any
-)
+from typing import Dict, Union, Callable, Optional, Coroutine, Set, Any
 import asyncio
 
 from pydantic import Field
@@ -18,6 +10,7 @@ from zorro_core.utils.logger import logger
 
 ActionChild = Union["Action", "ActionCommand"]
 
+
 class ActionCommand(Command):
     """
     Commands that are linked to an action should have an upstream field
@@ -27,9 +20,9 @@ class ActionCommand(Command):
     upstream: Optional[str] = Field(default=None)
 
     async def traverse(self, task: Callable[[ActionChild], Coroutine]):
-
         logger.debug("Traversing %s with %s", self, callable)
         await task(self)
+
 
 class Action(LayeredTool):
     """
@@ -66,7 +59,9 @@ class Action(LayeredTool):
             if child.upstream is None or child.upstream in completed:
                 # We need the task to return it's key so we can mark it
                 # as completed once done
-                async def wrapped_task(child_key: str, child: Union[Action, ActionCommand]):
+                async def wrapped_task(
+                    child_key: str, child: Union[Action, ActionCommand]
+                ):
                     await child.traverse(task)
                     return child_key
 
@@ -90,9 +85,7 @@ class Action(LayeredTool):
         completed: Set[str] = set()
 
         # Loop over task results until there is not running tasks
-        running_tasks = await self._traverse_ready_children(
-            pending, completed, task
-        )
+        running_tasks = await self._traverse_ready_children(pending, completed, task)
         while running_tasks:
             # We wait for any task to be completed
             tasks_completed, task_left = await asyncio.wait(
