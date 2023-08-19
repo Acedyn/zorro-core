@@ -1,10 +1,11 @@
 from enum import Enum
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, List
 from collections import defaultdict
 from copy import deepcopy
 
 from .plugin import Plugin
 from zorro_core.main.config import PluginConfig
+from zorro_core.utils.logger import logger
 
 
 class VersionOperator(Enum):
@@ -38,33 +39,14 @@ class VersionQuery:
     def match(self, plugin: Plugin) -> bool:
         """Test if the given plugin satisfies the query"""
 
-        # The equal operator is the simplest one
         if self.operator == VersionOperator.EQUAL:
             return self.version == plugin.version
-
-        # The less-equal and more-equal operators require to check
-        # the versions parts by parts
-        for query_version, plugin_version in zip(self.version.split("."), plugin.version.split(".")):
-            # The versions can either by strings (like beta, alpha) or numbers
-            query_version = int(query_version) if query_version.isdigit() else query_version
-            plugin_version = int(plugin_version) if plugin_version.isdigit() else plugin_version
-
-            if self.operator == VersionOperator.LESS_EQUAL:
-                if not plugin_version <= query_version:
-                    return False
-            elif self.operator == VersionOperator.MORE_EQUAL:
-                if plugin_version > query_version:
-                    return True
-
         if self.operator == VersionOperator.LESS_EQUAL:
-            # The less-equal operator must check all the versions parts
-            # and return False if any of the parts is not less-equal
-            return True
+            return plugin <= self
         elif self.operator == VersionOperator.MORE_EQUAL:
-            # The more-equal returns True as soon as a major version
-            # is more equal
-            return False
+            return plugin >= self
 
+        logger.warning("Could not match with version query %s: Invalid operator", self)
         return False
 
 
@@ -82,7 +64,7 @@ async def get_all_plugin_versions(name: str, config: PluginConfig) -> Set[Plugin
     return plugins
 
 
-async def get_matching_plugin_versions(
+async def get_matching_plugins_from_query(
     query: str, config: PluginConfig
 ) -> Dict[str, Set[Plugin]]:
     """
@@ -101,13 +83,21 @@ async def get_matching_plugin_versions(
     return plugin_versions
 
 
-def get_prefered_plugin_version(plugins: Set[Plugin]) -> Plugin:
+def get_prefered_plugin_version(plugins: Set[Plugin]) -> Optional[Plugin]:
     """
     When multiple plugin versions are potential quantidates, we use the
-    lasted one of them.
+    lasted version of them.
     """
 
-    raise NotImplemented
+    if len(plugins) == 0:
+        return None
+
+    prefered_plugin = list(plugins)[0]
+    for plugin in plugins:
+        if plugin > prefered_plugin:
+            prefered_plugin = plugin
+
+    return prefered_plugin
 
 
 def _combine_quandidates(
@@ -133,83 +123,126 @@ def _combine_quandidates(
 
 async def _resolve_plugin(
     plugin_name: str,
-    plugin_versions: Set[Plugin],
     quandidates: Dict[str, Set[Plugin]],
     config: PluginConfig,
 ):
-    plugin = get_prefered_plugin_version(plugin_versions)
-    quandidates[plugin_name] = set([plugin])
+    print("RESOLVE")
+    print(plugin_name)
+    print([i.version for i in quandidates[plugin_name]])
+    plugin = get_prefered_plugin_version(quandidates[plugin_name])
+    if plugin is None:
+        logger.error(
+            "Could not resolve plugin %s: No valid versions available", plugin_name
+        )
+        return None
+    print(plugin)
 
     # Make sure the plugin is fully loaded
-    await plugin.load_full()
+    loaded_plugin = await plugin.reload()
 
     # Add all the requirement possible quandidates
-    for requirement in plugin.require:
-        requirement_quandidates = await get_matching_plugin_versions(
+    new_quandidates = quandidates
+    for requirement in loaded_plugin.require:
+        requirement_quandidates = await get_matching_plugins_from_query(
             requirement, config
+        )
+        print("REQUIREMENT")
+        print(
+            [
+                {key: [i.version for i in value]}
+                for key, value in requirement_quandidates.items()
+            ]
+        )
+        print("ORIGINAL")
+        print(
+            [
+                {key: [i.version for i in value]}
+                for key, value in new_quandidates.items()
+            ]
         )
         # We don't want to keep the quandidates does not match
         # the current requirements
-        quandidates = _combine_quandidates(quandidates, requirement_quandidates)
+        new_quandidates = _combine_quandidates(new_quandidates, requirement_quandidates)
+        print("COMBINED")
+        print(
+            [
+                {key: [i.version for i in value]}
+                for key, value in new_quandidates.items()
+            ]
+        )
 
+    # The prefered plugin's requirement might not be compatible with
+    # the currently selected quandidates
+    if any(len(quandidates) == 0 for quandidates in new_quandidates.values()):
+        return None
+
+    quandidates.update(new_quandidates)
+    quandidates[plugin_name] = set([plugin])
     return plugin
 
 
-async def resolve_next_plugin(
-    quandidates: Dict[str, Set[Plugin]], config: PluginConfig, completed: Optional[Set[str]] = None
+async def _resolve_next_plugin_graph_iteration(
+    quandidates: Dict[str, Set[Plugin]],
+    config: PluginConfig,
+    completed: Optional[Set[str]] = None,
 ):
     """
-    Recusive function that will resolve a possible quandidate for a required plugin.
-    Tries every possible versions of the plugin in a specific order until a valid choice is found
+    Recusive function that will select a quandidates and resolve its dependencies.
+    It will try every possible versions of the plugin until a valid combinason is found
     """
 
     completed = completed or set()
     # Used in case we need to try again with a different version choice
     original_quandidates = deepcopy(quandidates)
 
-    plugin_name, plugin_versions = next(
+    # Select the next plugin that needs to be resolved
+    plugin_name = next(
         (
-            (plugin_name, versions)
-            for plugin_name, versions in quandidates.items()
+            plugin_name
+            for plugin_name in quandidates.keys()
             if plugin_name not in completed
         ),
-        (None, None),
+        None,
     )
 
     # There is not plugins to resolve anymore, the resolution is complete
-    if plugin_name is None or plugin_versions is None:
+    if plugin_name is None:
         return True
 
+    resolved_plugin = await _resolve_plugin(plugin_name, quandidates, config)
     # A plugin might be required but no quandidates
     # are valid anymore, this means that the graph we
     # are trying to resolve is impossible
-    if not len(plugin_versions):
+    if resolved_plugin is None:
         return False
 
-    resolved_plugin = await _resolve_plugin(plugin_name, plugin_versions, quandidates, config)
     completed.add(plugin_name)
 
     # Continue to resolve the next plugins,
     # the result will tell us if the resolution path was possible
-    while not resolve_next_plugin(quandidates, config, completed):
+    while not await _resolve_next_plugin_graph_iteration(
+        quandidates, config, completed
+    ):
         # Remove the choice we just made from the quandidates
         # until we make a choice that result in a possible resolution
         original_quandidates[plugin_name].remove(resolved_plugin)
-        quandidates = deepcopy(original_quandidates)
-        resolved_plugin = await _resolve_plugin(
-            plugin_name, plugin_versions, quandidates, config
-        )
+        quandidates.update(deepcopy(original_quandidates))
+        resolved_plugin = await _resolve_plugin(plugin_name, quandidates, config)
+        if resolved_plugin is None:
+            return False
     else:
         # The path chosen completed the requirements
         return True
 
 
-async def resolve_plugins(query: str, config: PluginConfig) -> Set[Plugin]:
+async def resolve_plugins(query: str, config: PluginConfig) -> List[Plugin]:
     """
     Resolve a flat list of plugin that satisfies the given query
     """
 
-    plugin_quandidates = await get_matching_plugin_versions(query, config)
-    await resolve_next_plugin(plugin_quandidates, config)
+    plugin_quandidates = await get_matching_plugins_from_query(query, config)
+    if not await _resolve_next_plugin_graph_iteration(plugin_quandidates, config):
+        logger.error("Could not resolve the depencency graph for the query %s", query)
+        return set()
 
-    return set(versions.pop() for versions in plugin_quandidates.values())
+    return [versions.pop() for versions in plugin_quandidates.values()]

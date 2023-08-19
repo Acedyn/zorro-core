@@ -1,5 +1,4 @@
 {
-  "name": "foo",
   "tools": {
     "commands": ["./commands"],
     "actions": ["./actions"]
