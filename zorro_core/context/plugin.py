@@ -1,11 +1,14 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
 from uuid import uuid4, UUID
 
 from pydantic import BaseModel, Field
 
 from zorro_core.utils.deserialize import patch_model_from_file
+
+if TYPE_CHECKING:
+    from zorro_core.context.resolver import VersionQuery
 
 
 class PluginPaths(BaseModel):
@@ -34,7 +37,6 @@ class Plugin(BaseModel):
     name: str
     version: str
     path: Path
-    id: UUID = Field(default_factory=uuid4)
     label: str = Field(default="")
     require: List[str] = Field(default_factory=list, repr=False)
     env: Dict[str, str] = Field(default_factory=dict, repr=False)
@@ -46,20 +48,6 @@ class Plugin(BaseModel):
         super().__init__(**data)
         if not self.label:
             self.label = self.name.replace("_", " ").title()
-    
-    def __hash__(self):
-        return hash((type(self), self.name, self.version, self.path, self.label))
-
-    async def load_full(self):
-        """
-        Read the config of the plugin and parse it
-        """
-
-        # TODO: Currently this function returns a new plugin rather than
-        # updating the current one
-        if self == await Plugin.load_bare(self.path):
-            return
-        await patch_model_from_file(self, self.path, Plugin)
 
     @staticmethod
     async def load_bare(path: Path) -> Plugin:
@@ -73,5 +61,78 @@ class Plugin(BaseModel):
     @classmethod
     async def load(cls, path: Path) -> Optional[Plugin]:
         plugin = await cls.load_bare(path)
-        await plugin.load_full()
-        return plugin
+        return await patch_model_from_file(plugin, plugin.path, Plugin)
+
+    async def as_bare(self):
+        return await self.load_bare(self.path)
+
+    async def reload(self):
+        return await self.load(self.path) or self
+
+    def __hash__(self):
+        return hash((type(self), self.name, self.version, self.path, self.label))
+
+    def __lt__(self, plugin: Union[Plugin, VersionQuery]):
+        """
+        The comparison is based on plugin versions
+        """
+        # The versions are compared parts by parts
+        for self_version, plugin_version in zip(
+            self.version.split("."), plugin.version.split(".")
+        ):
+            # The versions can either by strings (like beta, alpha) or numbers
+            if self_version.isdigit() and self_version.isdigit():
+                self_version = int(self_version)
+                plugin_version = int(plugin_version)
+
+            # HACK: The python typing system does not allow us to compare
+            # two unions even if we are sure they will be of the same type
+            self_version = cast(str, self_version)
+            plugin_version = cast(str, plugin_version)
+
+            if self_version < plugin_version:
+                return True
+            elif self_version > plugin_version:
+                break
+
+        # If none of the parts are lower the the other plugin version
+        # this plugin is higher or equal the other
+        return False
+
+    def __le__(self, plugin: Union[Plugin, VersionQuery]):
+        """
+        The comparison is based on plugin version
+        """
+        if self < plugin:
+            return True
+
+        # The versions are compared parts by parts
+        for self_version, plugin_version in zip(
+            self.version.split("."), plugin.version.split(".")
+        ):
+            # The versions can either by strings (like beta, alpha) or numbers
+            if self_version.isdigit() and self_version.isdigit():
+                self_version = int(self_version)
+                plugin_version = int(plugin_version)
+
+            # HACK: The python typing system does not allow us to compare
+            # two unions even if we are sure they will be of the same type
+            self_version = cast(str, self_version)
+            plugin_version = cast(str, plugin_version)
+
+            if self_version != plugin_version:
+                return False
+
+        return True
+
+    def __gt__(self, plugin: Union[Plugin, VersionQuery]):
+        """
+        The comparison is based on plugin version
+        """
+        return not self <= plugin
+
+    def __ge__(self, plugin: Union[Plugin, VersionQuery]):
+        """
+        The comparison is based on plugin version
+        """
+        return not self < plugin

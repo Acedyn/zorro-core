@@ -2,5 +2,6 @@
   "tools": {
     "commands": ["./commands"],
     "actions": ["./actions"]
-  }
+  },
+  "require": ["foo<=3.8"]
 }
