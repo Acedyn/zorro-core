@@ -26,6 +26,7 @@ async def test_plugin_resolution():
 
     query = "foo>=3.0.3 bar==2.3 baz<=5.6"
     plugins = await resolve_plugins(query, config)
+    assert len(plugins) == 3
     for plugin in plugins:
         if plugin.name == "foo":
             assert plugin.version == "3.2"

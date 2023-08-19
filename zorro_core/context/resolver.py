@@ -75,6 +75,7 @@ async def get_matching_plugins_from_query(
     plugin_versions = defaultdict(set)
     for single_query in query.split(" "):
         version_query = VersionQuery(single_query)
+        plugin_versions[version_query.name] = set()
 
         for plugin in await get_all_plugin_versions(version_query.name, config):
             if version_query.match(plugin):
@@ -126,16 +127,12 @@ async def _resolve_plugin(
     quandidates: Dict[str, Set[Plugin]],
     config: PluginConfig,
 ):
-    print("RESOLVE")
-    print(plugin_name)
-    print([i.version for i in quandidates[plugin_name]])
     plugin = get_prefered_plugin_version(quandidates[plugin_name])
     if plugin is None:
         logger.error(
             "Could not resolve plugin %s: No valid versions available", plugin_name
         )
         return None
-    print(plugin)
 
     # Make sure the plugin is fully loaded
     loaded_plugin = await plugin.reload()
@@ -146,35 +143,15 @@ async def _resolve_plugin(
         requirement_quandidates = await get_matching_plugins_from_query(
             requirement, config
         )
-        print("REQUIREMENT")
-        print(
-            [
-                {key: [i.version for i in value]}
-                for key, value in requirement_quandidates.items()
-            ]
-        )
-        print("ORIGINAL")
-        print(
-            [
-                {key: [i.version for i in value]}
-                for key, value in new_quandidates.items()
-            ]
-        )
         # We don't want to keep the quandidates does not match
         # the current requirements
         new_quandidates = _combine_quandidates(new_quandidates, requirement_quandidates)
-        print("COMBINED")
-        print(
-            [
-                {key: [i.version for i in value]}
-                for key, value in new_quandidates.items()
-            ]
-        )
 
     # The prefered plugin's requirement might not be compatible with
     # the currently selected quandidates
     if any(len(quandidates) == 0 for quandidates in new_quandidates.values()):
-        return None
+        quandidates[plugin_name].remove(plugin)
+        return await _resolve_plugin(plugin_name, quandidates, config)
 
     quandidates.update(new_quandidates)
     quandidates[plugin_name] = set([plugin])
@@ -243,6 +220,6 @@ async def resolve_plugins(query: str, config: PluginConfig) -> List[Plugin]:
     plugin_quandidates = await get_matching_plugins_from_query(query, config)
     if not await _resolve_next_plugin_graph_iteration(plugin_quandidates, config):
         logger.error("Could not resolve the depencency graph for the query %s", query)
-        return set()
+        return []
 
     return [versions.pop() for versions in plugin_quandidates.values()]
