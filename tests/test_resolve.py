@@ -19,18 +19,31 @@ async def test_plugin_search():
     assert len((await get_matching_plugins_from_query("foo<=3.5", config))["foo"]) == 2
 
 
+plugin_resolution_queries = [
+    (
+        "foo>=3.0.3 bar==2.3 baz<=5.6", 
+        {
+            "foo": "3.2",
+            "bar": "2.3",
+            "baz": "3.1",
+        }
+    ),
+    (
+        "foo>=3.2 foo<=3.8", 
+        {
+            "foo": "3.2",
+        }
+    )
+]
+
 @pytest.mark.asyncio
-async def test_plugin_resolution():
+@pytest.mark.parametrize("query,expected", plugin_resolution_queries)
+async def test_plugin_resolution(query, expected):
     plugin_paths = [Path(__file__).parent / "mock"]
     config = PluginConfig(plugin_paths=plugin_paths)
 
-    query = "foo>=3.0.3 bar==2.3 baz<=5.6"
     plugins = await resolve_plugins(query, config)
-    assert len(plugins) == 3
+    assert len(plugins) == len(expected.keys())
     for plugin in plugins:
-        if plugin.name == "foo":
-            assert plugin.version == "3.2"
-        if plugin.name == "bar":
-            assert plugin.version == "2.3"
-        if plugin.name == "baz":
-            assert plugin.version == "3.1"
+        assert plugin.name in expected.keys()
+        assert plugin.version == expected[plugin.name]

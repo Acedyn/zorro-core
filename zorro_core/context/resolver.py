@@ -129,9 +129,6 @@ async def _resolve_plugin(
 ):
     plugin = get_prefered_plugin_version(quandidates[plugin_name])
     if plugin is None:
-        logger.error(
-            "Could not resolve plugin %s: No valid versions available", plugin_name
-        )
         return None
 
     # Make sure the plugin is fully loaded
@@ -150,6 +147,7 @@ async def _resolve_plugin(
     # The prefered plugin's requirement might not be compatible with
     # the currently selected quandidates
     if any(len(quandidates) == 0 for quandidates in new_quandidates.values()):
+        # Look for a plugin version again
         quandidates[plugin_name].remove(plugin)
         return await _resolve_plugin(plugin_name, quandidates, config)
 
@@ -191,6 +189,9 @@ async def _resolve_next_plugin_graph_iteration(
     # are valid anymore, this means that the graph we
     # are trying to resolve is impossible
     if resolved_plugin is None:
+        logger.debug(
+            "No valid versions available for plugin %s: Trying different path", plugin_name
+        )
         return False
 
     completed.add(plugin_name)
@@ -204,8 +205,15 @@ async def _resolve_next_plugin_graph_iteration(
         # until we make a choice that result in a possible resolution
         original_quandidates[plugin_name].remove(resolved_plugin)
         quandidates.update(deepcopy(original_quandidates))
+
         resolved_plugin = await _resolve_plugin(plugin_name, quandidates, config)
+        # A plugin might be required but no quandidates
+        # are valid anymore, this means that the graph we
+        # are trying to resolve is impossible
         if resolved_plugin is None:
+            logger.debug(
+                "No valid versions available for plugin %s: Trying different path", plugin_name
+            )
             return False
     else:
         # The path chosen completed the requirements
