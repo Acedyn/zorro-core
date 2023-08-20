@@ -230,4 +230,4 @@ async def resolve_plugins(query: str, config: PluginConfig) -> List[Plugin]:
         logger.error("Could not resolve the depencency graph for the query %s", query)
         return []
 
-    return [versions.pop() for versions in plugin_quandidates.values()]
+    return [await versions.pop().reload() for versions in plugin_quandidates.values()]

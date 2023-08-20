@@ -1,29 +1,23 @@
 from __future__ import annotations
 from uuid import uuid4, UUID
-from typing import Dict, Union, List, Optional, Any
+from typing import Optional, Any
 from enum import IntEnum
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field
 
 
-class ToolType(IntEnum):
-    COMMAND = 1
-    ACTION = 2
-    HOOK = 3
-    WIDGET = 4
-
-
 class ToolStatus(IntEnum):
-    INITIALIZED = 1
-    RUNNING = 2
-    PAUSED = 3
-    ERROR = 4
-    INVALID = 5
+    INITIALIZING = 1    # When the class is being instanciated
+    INITIALIZED = 2     # The tool is ready to start
+    RUNNING = 3         # The tool is running
+    PAUSED = 4          # The execution of the tool has been paused
+    ERROR = 5           # An error occured during the execution, the tool has stopped
+    INVALID = 6         # The tool definition is invalid or similar errors
 
 
 class Socket(BaseModel):
-    raw: Union[str, int, float, list, dict]
+    raw: str | int | float | list | dict
     cast: str
     id: UUID = Field(default_factory=uuid4)
 
@@ -36,14 +30,15 @@ class ToolBase(BaseModel, ABC):
     """
 
     name: str
-    type: ToolType = Field(default=None)
+    type: str = Field(default=None)
     id: UUID = Field(default_factory=uuid4)
     label: str = Field(default="", repr=False)
-    inputs: Dict[str, Socket] = Field(default_factory=dict, repr=False)
-    output: Dict[str, Socket] = Field(default_factory=dict, repr=False)
+    status: ToolStatus = Field(default=ToolStatus.INITIALIZING)
+    inputs: dict[str, Socket] = Field(default_factory=dict, repr=False)
+    output: dict[str, Socket] = Field(default_factory=dict, repr=False)
     hidden: bool = Field(default=False, repr=False)
     tooltip: str = Field(default="No tooltip available", repr=False)
-    logs: List[str] = Field(default_factory=list, repr=False)
+    logs: list[str] = Field(default_factory=list, repr=False)
 
     def __init__(self, **data: Any):
         super().__init__(**data)
@@ -70,4 +65,4 @@ class LayeredTool(ToolBase):
     together will form one final config.
     """
 
-    inherit: List[str] = Field(default_factory=list, repr=False)
+    inherit: list[str] = Field(default_factory=list, repr=False)

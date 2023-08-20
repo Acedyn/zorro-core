@@ -1,16 +1,15 @@
 from __future__ import annotations
 from typing import Optional, TypeVar, Any
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from .tool_base import ToolBase, ToolType
+from zorro_core.schedulers.scheduler import Scheduler
+from zorro_core.schedulers.local_scheduler import LocalScheduler
+
+from .tool_base import ToolBase
 from zorro_core.utils.logger import logger
 
 T = TypeVar("T")
-
-
-class ClientResolver(BaseModel):
-    key: str = Field(default="")
 
 
 class Command(ToolBase):
@@ -18,10 +17,10 @@ class Command(ToolBase):
     A command is a task that will be sent to a client to be executed.
     """
 
-    client: ClientResolver = Field(default_factory=ClientResolver)
+    scheduler: Scheduler = Field(default_factory=LocalScheduler)
 
     def __init__(self, **data: Any):
-        data["type"] = ToolType.COMMAND
+        data["type"] = "command"
         super().__init__(**data)
 
     async def execute(self):
