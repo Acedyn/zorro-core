@@ -1,10 +1,10 @@
 from __future__ import annotations
-from typing import Dict, Union, Callable, Optional, Coroutine, Set, Any
+from typing import Union, Callable, Optional, Coroutine, Set, Any
 import asyncio
 
 from pydantic import Field
 
-from .tool_base import LayeredTool, ToolType
+from .tool_base import LayeredTool
 from .command import Command
 from zorro_core.utils.logger import logger
 
@@ -30,11 +30,11 @@ class Action(LayeredTool):
     It allows to chain and organize multiple commands into a dependency graph
     """
 
-    children: Dict[str, ActionChild] = Field(default_factory=dict, repr=False)
+    children: dict[str, ActionChild] = Field(default_factory=dict, repr=False)
     upstream: Optional[str] = Field(default=None)
 
     def __init__(self, **data: Any):
-        data["type"] = ToolType.ACTION
+        data["type"] = "action"
         super().__init__(**data)
 
     async def _traverse_ready_children(
@@ -60,7 +60,7 @@ class Action(LayeredTool):
                 # We need the task to return it's key so we can mark it
                 # as completed once done
                 async def wrapped_task(
-                    child_key: str, child: Union[Action, ActionCommand]
+                    child_key: str, child: ActionChild
                 ):
                     await child.traverse(task)
                     return child_key

@@ -1,7 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, cast, TYPE_CHECKING
-from uuid import uuid4, UUID
+from typing import Optional, Any, cast, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
@@ -12,15 +11,15 @@ if TYPE_CHECKING:
 
 
 class PluginPaths(BaseModel):
-    append: List[Path] = Field(default_factory=list)
-    prepend: List[Path] = Field(default_factory=list)
+    append: list[Path] = Field(default_factory=list)
+    prepend: list[Path] = Field(default_factory=list)
 
 
 class PluginTools(BaseModel):
-    commands: List[Path] = Field(default_factory=list)
-    actions: List[Path] = Field(default_factory=list)
-    hooks: List[Path] = Field(default_factory=list)
-    widgets: List[Path] = Field(default_factory=list)
+    commands: list[Path] = Field(default_factory=list)
+    actions: list[Path] = Field(default_factory=list)
+    hooks: list[Path] = Field(default_factory=list)
+    widgets: list[Path] = Field(default_factory=list)
 
 
 class ClientConfig(BaseModel):
@@ -38,11 +37,11 @@ class Plugin(BaseModel):
     version: str
     path: Path
     label: str = Field(default="")
-    require: List[str] = Field(default_factory=list, repr=False)
-    env: Dict[str, str] = Field(default_factory=dict, repr=False)
+    require: list[str] = Field(default_factory=list, repr=False)
+    env: dict[str, str] = Field(default_factory=dict, repr=False)
     paths: PluginPaths = Field(default_factory=PluginPaths, repr=False)
     tools: PluginTools = Field(default_factory=PluginTools, repr=False)
-    clients: List[ClientConfig] = Field(default_factory=list, repr=False)
+    clients: list[ClientConfig] = Field(default_factory=list, repr=False)
 
     def __init__(self, **data: Any):
         super().__init__(**data)
@@ -72,7 +71,7 @@ class Plugin(BaseModel):
     def __hash__(self):
         return hash((type(self), self.name, self.version, self.path, self.label))
 
-    def __lt__(self, plugin: Union[Plugin, VersionQuery]):
+    def __lt__(self, plugin: Plugin | VersionQuery):
         """
         The comparison is based on plugin versions
         """
@@ -99,7 +98,7 @@ class Plugin(BaseModel):
         # this plugin is higher or equal the other
         return False
 
-    def __le__(self, plugin: Union[Plugin, VersionQuery]):
+    def __le__(self, plugin: Plugin | VersionQuery):
         """
         The comparison is based on plugin version
         """
@@ -125,13 +124,13 @@ class Plugin(BaseModel):
 
         return True
 
-    def __gt__(self, plugin: Union[Plugin, VersionQuery]):
+    def __gt__(self, plugin: Plugin | VersionQuery):
         """
         The comparison is based on plugin version
         """
         return not self <= plugin
 
-    def __ge__(self, plugin: Union[Plugin, VersionQuery]):
+    def __ge__(self, plugin: Plugin | VersionQuery):
         """
         The comparison is based on plugin version
         """
