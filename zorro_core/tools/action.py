@@ -59,9 +59,7 @@ class Action(LayeredTool):
             if child.upstream is None or child.upstream in completed:
                 # We need the task to return it's key so we can mark it
                 # as completed once done
-                async def wrapped_task(
-                    child_key: str, child: ActionChild
-                ):
+                async def wrapped_task(child_key: str, child: ActionChild):
                     await child.traverse(task)
                     return child_key
 

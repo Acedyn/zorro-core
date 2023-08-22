@@ -15,9 +15,11 @@ class ClientQuery(BaseModel):
     """
     Filter set used to select one client among the available ones
     """
+
     program_name: Optional[str] = Field(default=None)
     client_pid: Optional[str] = Field(default=None)
     client_metadata: Optional[dict[str, str]] = Field(default=None)
+
 
 class LocalScheduler(Scheduler):
     """
@@ -35,5 +37,5 @@ class LocalScheduler(Scheduler):
         data["type"] = "local"
         super().__init__(**data)
 
-    def schedule_command(self, command: Command, context: Context):
+    async def schedule_command(self, command: Command, context: Context):
         pass

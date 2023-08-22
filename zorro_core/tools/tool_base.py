@@ -8,12 +8,12 @@ from pydantic import BaseModel, Field
 
 
 class ToolStatus(IntEnum):
-    INITIALIZING = 1    # When the class is being instanciated
-    INITIALIZED = 2     # The tool is ready to start
-    RUNNING = 3         # The tool is running
-    PAUSED = 4          # The execution of the tool has been paused
-    ERROR = 5           # An error occured during the execution, the tool has stopped
-    INVALID = 6         # The tool definition is invalid or similar errors
+    INITIALIZING = 1  # When the class is being instanciated
+    INITIALIZED = 2  # The tool is ready to start
+    RUNNING = 3  # The tool is running
+    PAUSED = 4  # The execution of the tool has been paused
+    ERROR = 5  # An error occured during the execution, the tool has stopped
+    INVALID = 6  # The tool definition is invalid or similar errors
 
 
 class Socket(BaseModel):

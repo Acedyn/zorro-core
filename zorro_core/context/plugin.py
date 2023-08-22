@@ -10,9 +10,10 @@ if TYPE_CHECKING:
     from zorro_core.context.resolver import VersionQuery
 
 
-class PluginPaths(BaseModel):
+class PluginEnv(BaseModel):
     append: list[Path] = Field(default_factory=list)
     prepend: list[Path] = Field(default_factory=list)
+    set: Optional[str] = Field(default=None)
 
 
 class PluginTools(BaseModel):
@@ -38,8 +39,7 @@ class Plugin(BaseModel):
     path: Path
     label: str = Field(default="")
     require: list[str] = Field(default_factory=list, repr=False)
-    env: dict[str, str] = Field(default_factory=dict, repr=False)
-    paths: PluginPaths = Field(default_factory=PluginPaths, repr=False)
+    env: dict[str, PluginEnv] = Field(default_factory=dict, repr=False)
     tools: PluginTools = Field(default_factory=PluginTools, repr=False)
     clients: list[ClientConfig] = Field(default_factory=list, repr=False)
 
@@ -47,6 +47,17 @@ class Plugin(BaseModel):
         super().__init__(**data)
         if not self.label:
             self.label = self.name.replace("_", " ").title()
+
+        # Convert the env paths to absolute paths
+        for env in self.env.values():
+            env.append = [self._resolve_path(p) for p in env.append]
+            env.prepend = [self._resolve_path(p) for p in env.prepend]
+
+        # Convert the tools paths to absolute paths
+        self.tools.commands = [self._resolve_path(p) for p in self.tools.commands]
+        self.tools.actions = [self._resolve_path(p) for p in self.tools.actions]
+        self.tools.hooks = [self._resolve_path(p) for p in self.tools.hooks]
+        self.tools.widgets = [self._resolve_path(p) for p in self.tools.widgets]
 
     @staticmethod
     async def load_bare(path: Path) -> Plugin:
@@ -67,6 +78,11 @@ class Plugin(BaseModel):
 
     async def reload(self):
         return await self.load(self.path) or self
+
+    def _resolve_path(self, path: Path):
+        if path.is_absolute():
+            return path
+        return self.path.parent / path
 
     def __hash__(self):
         return hash((type(self), self.name, self.version, self.path, self.label))

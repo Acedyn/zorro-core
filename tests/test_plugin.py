@@ -15,7 +15,8 @@ async def test_plugin_load():
     assert isinstance(plugin, Plugin)
     assert plugin.name == "foo"
     assert plugin.version == "3.2"
-    assert plugin.tools.commands == [Path("./commands")]
+    assert plugin.tools.commands == [plugin_path.parent / Path("./commands")]
+    assert plugin.tools.actions == [plugin_path.parent / Path("./actions")]
 
 
 def test_plugin_comparison():
