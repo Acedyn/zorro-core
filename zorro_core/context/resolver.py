@@ -190,7 +190,8 @@ async def _resolve_next_plugin_graph_iteration(
     # are trying to resolve is impossible
     if resolved_plugin is None:
         logger.debug(
-            "No valid versions available for plugin %s: Trying different path", plugin_name
+            "No valid versions available for plugin %s: Trying different path",
+            plugin_name,
         )
         return False
 
@@ -212,7 +213,8 @@ async def _resolve_next_plugin_graph_iteration(
         # are trying to resolve is impossible
         if resolved_plugin is None:
             logger.debug(
-                "No valid versions available for plugin %s: Trying different path", plugin_name
+                "No valid versions available for plugin %s: Trying different path",
+                plugin_name,
             )
             return False
     else:
