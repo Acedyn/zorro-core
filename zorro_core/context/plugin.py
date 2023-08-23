@@ -4,6 +4,7 @@ from typing import Optional, Any, cast, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
+from .program import Program
 from zorro_core.utils.deserialize import patch_model_from_file
 
 if TYPE_CHECKING:
@@ -42,6 +43,7 @@ class Plugin(BaseModel):
     env: dict[str, PluginEnv] = Field(default_factory=dict, repr=False)
     tools: PluginTools = Field(default_factory=PluginTools, repr=False)
     clients: list[ClientConfig] = Field(default_factory=list, repr=False)
+    programs: list[Program] = Field(default_factory=list, repr=False)
 
     def __init__(self, **data: Any):
         super().__init__(**data)
