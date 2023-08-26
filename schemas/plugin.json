@@ -1,146 +1,188 @@
 {
-    "$defs": {
-        "ClientConfig": {
-            "properties": {
-                "name": {
-                    "title": "Name",
-                    "type": "string"
-                },
-                "path": {
-                    "title": "Path",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "name",
-                "path"
-            ],
-            "title": "ClientConfig",
-            "type": "object"
-        },
-        "PluginEnv": {
-            "properties": {
-                "append": {
-                    "items": {
-                        "format": "path",
-                        "type": "string"
-                    },
-                    "title": "Append",
-                    "type": "array"
-                },
-                "prepend": {
-                    "items": {
-                        "format": "path",
-                        "type": "string"
-                    },
-                    "title": "Prepend",
-                    "type": "array"
-                },
-                "set": {
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "null"
-                        }
-                    ],
-                    "default": null,
-                    "title": "Set"
-                }
-            },
-            "title": "PluginEnv",
-            "type": "object"
-        },
-        "PluginTools": {
-            "properties": {
-                "commands": {
-                    "items": {
-                        "format": "path",
-                        "type": "string"
-                    },
-                    "title": "Commands",
-                    "type": "array"
-                },
-                "actions": {
-                    "items": {
-                        "format": "path",
-                        "type": "string"
-                    },
-                    "title": "Actions",
-                    "type": "array"
-                },
-                "hooks": {
-                    "items": {
-                        "format": "path",
-                        "type": "string"
-                    },
-                    "title": "Hooks",
-                    "type": "array"
-                },
-                "widgets": {
-                    "items": {
-                        "format": "path",
-                        "type": "string"
-                    },
-                    "title": "Widgets",
-                    "type": "array"
-                }
-            },
-            "title": "PluginTools",
-            "type": "object"
-        }
-    },
-    "description": "\n    Plugins register a set of tools, environment variables and clients.\n    A set of tools will define what interactions are available or not.\n    ",
-    "properties": {
+  "$defs": {
+    "ClientConfig": {
+      "properties": {
         "name": {
-            "title": "Name",
-            "type": "string"
-        },
-        "version": {
-            "title": "Version",
-            "type": "string"
+          "title": "Name",
+          "type": "string"
         },
         "path": {
-            "format": "path",
-            "title": "Path",
-            "type": "string"
-        },
-        "label": {
-            "default": "",
-            "title": "Label",
-            "type": "string"
-        },
-        "require": {
-            "items": {
-                "type": "string"
-            },
-            "title": "Require",
-            "type": "array"
-        },
-        "env": {
-            "additionalProperties": {
-                "$ref": "#/$defs/PluginEnv"
-            },
-            "title": "Env",
-            "type": "object"
-        },
-        "tools": {
-            "$ref": "#/$defs/PluginTools"
-        },
-        "clients": {
-            "items": {
-                "$ref": "#/$defs/ClientConfig"
-            },
-            "title": "Clients",
-            "type": "array"
+          "title": "Path",
+          "type": "string"
         }
-    },
-    "required": [
+      },
+      "required": [
         "name",
-        "version",
         "path"
-    ],
-    "title": "Plugin",
-    "type": "object"
+      ],
+      "title": "ClientConfig",
+      "type": "object"
+    },
+    "PluginEnv": {
+      "properties": {
+        "append": {
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Append",
+          "type": "array"
+        },
+        "prepend": {
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Prepend",
+          "type": "array"
+        },
+        "set": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Set"
+        }
+      },
+      "title": "PluginEnv",
+      "type": "object"
+    },
+    "PluginTools": {
+      "properties": {
+        "commands": {
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "actions": {
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "hooks": {
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Hooks",
+          "type": "array"
+        },
+        "widgets": {
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Widgets",
+          "type": "array"
+        }
+      },
+      "title": "PluginTools",
+      "type": "object"
+    },
+    "Program": {
+      "description": "\n    A program defines an installed program an how to\n    launch it\n    ",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "subsets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Subsets",
+          "type": "array"
+        },
+        "launch_template": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Launch Template",
+          "type": "array"
+        },
+        "launch_client_template": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Launch Client Template",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Program",
+      "type": "object"
+    }
+  },
+  "description": "\n    Plugins register a set of tools, environment variables and clients.\n    A set of tools will define what interactions are available or not.\n    ",
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "path": {
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "label": {
+      "default": "",
+      "title": "Label",
+      "type": "string"
+    },
+    "require": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Require",
+      "type": "array"
+    },
+    "env": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PluginEnv"
+      },
+      "title": "Env",
+      "type": "object"
+    },
+    "tools": {
+      "$ref": "#/$defs/PluginTools"
+    },
+    "clients": {
+      "items": {
+        "$ref": "#/$defs/ClientConfig"
+      },
+      "title": "Clients",
+      "type": "array"
+    },
+    "programs": {
+      "items": {
+        "$ref": "#/$defs/Program"
+      },
+      "title": "Programs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "path"
+  ],
+  "title": "Plugin",
+  "type": "object"
 }

@@ -1,0 +1,261 @@
+{
+  "$defs": {
+    "Action": {
+      "description": "\n    An action holds groups of subactions and commands.\n    It allows to chain and organize multiple commands into a dependency graph\n    ",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": null,
+          "title": "Type",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolStatus"
+            }
+          ],
+          "default": "INITIALIZING"
+        },
+        "inputs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Socket"
+          },
+          "title": "Inputs",
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Socket"
+          },
+          "title": "Output",
+          "type": "object"
+        },
+        "hidden": {
+          "default": false,
+          "title": "Hidden",
+          "type": "boolean"
+        },
+        "tooltip": {
+          "default": "No tooltip available",
+          "title": "Tooltip",
+          "type": "string"
+        },
+        "logs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Logs",
+          "type": "array"
+        },
+        "inherit": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Inherit",
+          "type": "array"
+        },
+        "children": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Action"
+              },
+              {
+                "$ref": "#/$defs/ActionCommand"
+              }
+            ]
+          },
+          "title": "Children",
+          "type": "object"
+        },
+        "upstream": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upstream"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Action",
+      "type": "object"
+    },
+    "ActionCommand": {
+      "description": "\n    Commands that are linked to an action should have an upstream field\n    used to declare the dependencies\n    ",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": null,
+          "title": "Type",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolStatus"
+            }
+          ],
+          "default": "INITIALIZING"
+        },
+        "inputs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Socket"
+          },
+          "title": "Inputs",
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Socket"
+          },
+          "title": "Output",
+          "type": "object"
+        },
+        "hidden": {
+          "default": false,
+          "title": "Hidden",
+          "type": "boolean"
+        },
+        "tooltip": {
+          "default": "No tooltip available",
+          "title": "Tooltip",
+          "type": "string"
+        },
+        "logs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Logs",
+          "type": "array"
+        },
+        "implementation_key": {
+          "title": "Implementation Key",
+          "type": "string"
+        },
+        "scheduler": {
+          "$ref": "#/$defs/Scheduler"
+        },
+        "upstream": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upstream"
+        }
+      },
+      "required": [
+        "name",
+        "implementation_key"
+      ],
+      "title": "ActionCommand",
+      "type": "object"
+    },
+    "Scheduler": {
+      "description": "\n    A scheduler is used to send commands requests.\n    Some scheduler can send commands to the local computer, to\n    render farm managers, or send command remotely.\n    ",
+      "properties": {
+        "type": {
+          "default": null,
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "title": "Scheduler",
+      "type": "object"
+    },
+    "Socket": {
+      "description": "\n    A socket acts as a payload for an input/output between two tools\n    ",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "format": "binary",
+              "type": "string"
+            }
+          ],
+          "title": "Raw"
+        },
+        "cast": {
+          "title": "Cast",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "cast"
+      ],
+      "title": "Socket",
+      "type": "object"
+    },
+    "ToolStatus": {
+      "description": "Various states a tool can have, they are ordered by importance",
+      "enum": [
+        "INITIALIZING",
+        "INITIALIZED",
+        "RUNNING",
+        "PAUSED",
+        "ERROR",
+        "INVALID"
+      ],
+      "title": "ToolStatus",
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/Action"
+    }
+  ]
+}

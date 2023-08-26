@@ -1,0 +1,18 @@
+syntax = "proto3";
+package zorro;
+
+
+message Socket {
+    /*
+    A socket acts as a payload for an input/output between two tools
+    */
+    oneof raw {
+        string raw_string = 1;
+        int32 raw_integer = 2;
+        float raw_number = 3;
+        bytes raw_binary = 4;
+    }
+    string cast = 5;
+    string id = 6;
+}
+

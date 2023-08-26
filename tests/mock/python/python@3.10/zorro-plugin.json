@@ -1,1 +1,20 @@
-{}
+{
+  "env": {
+    "PATH": {
+      "append": [
+        "./bin"
+      ]
+    }
+    "PYTHONPATH": {
+      "append": [
+        "."
+      ]
+    }
+  },
+  "programs": [
+    {
+      "name": "python"
+      "launch_client_template": "python -m zorro_client"
+    }
+  ]
+}
