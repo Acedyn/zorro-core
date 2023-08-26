@@ -1,0 +1,13 @@
+syntax = "proto3";
+package zorro;
+
+
+enum ToolStatus {
+    /*Various states a tool can have, they are ordered by importance*/
+    INITIALIZING = 0;
+    INITIALIZED = 1;
+    RUNNING = 2;
+    PAUSED = 3;
+    ERROR = 4;
+    INVALID = 5;
+}

@@ -1,23 +1,31 @@
 from __future__ import annotations
 from uuid import uuid4, UUID
 from typing import Optional, Any
-from enum import IntEnum
+from enum import Enum
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field
 
 
-class ToolStatus(IntEnum):
-    INITIALIZING = 1  # When the class is being instanciated
-    INITIALIZED = 2  # The tool is ready to start
-    RUNNING = 3  # The tool is running
-    PAUSED = 4  # The execution of the tool has been paused
-    ERROR = 5  # An error occured during the execution, the tool has stopped
-    INVALID = 6  # The tool definition is invalid or similar errors
+class ToolStatus(Enum):
+    """
+    Various states a tool can have, they are ordered by importance
+    """
+
+    INITIALIZING = "INITIALIZING"   # When the class is being instanciated
+    INITIALIZED = "INITIALIZED"     # The tool is ready to start
+    RUNNING = "RUNNING"             # The tool is running
+    PAUSED = "PAUSED"               # The execution of the tool has been paused
+    ERROR = "ERROR"                 # An error occured during the execution, the tool has stopped
+    INVALID = "INVALID"             # The tool definition is invalid or similar errors
 
 
 class Socket(BaseModel):
-    raw: str | int | float | list | dict
+    """
+    A socket acts as a payload for an input/output between two tools
+    """
+
+    raw: str | int | float | bytes
     cast: str
     id: UUID = Field(default_factory=uuid4)
 

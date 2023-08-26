@@ -17,6 +17,7 @@ class Command(ToolBase):
     A command is a task that will be sent to a client to be executed.
     """
 
+    implementation_key: str = Field()
     scheduler: Scheduler = Field(default_factory=LocalScheduler)
 
     def __init__(self, **data: Any):

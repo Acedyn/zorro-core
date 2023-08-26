@@ -1,8 +1,0 @@
-{
-  "env": {
-    "PYTHONPATH":{
-      "append": ["."]
-    }
-  },
-  "require": ["python>=3.10"]
-}
