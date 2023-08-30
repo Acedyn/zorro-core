@@ -4,8 +4,12 @@ package zorro;
 import "google/protobuf/empty.proto";
 import "zorro_core/network/protos/command.proto";
 
-service ZorroClient {
-  rpc GetNewCommandRequests(google.protobuf.Empty) returns (stream zorro.CommandRequest);
-  rpc GetRunningCommandRequests(google.protobuf.Empty) returns (stream zorro.CommandRequest);
-  rpc GetAndSendCommandUpdates(stream zorro.CommandUpdate) returns (stream zorro.CommandUpdate);
+message ID { string id = 1; }
+
+service CommandScheduling {
+  rpc GetCommand(ID) returns (zorro.CommandRequest);
+  rpc GetCommandRequests(google.protobuf.Empty)
+      returns (stream zorro.CommandRequest);
+  rpc GetAndSendCommandUpdates(stream zorro.CommandUpdate)
+      returns (stream zorro.CommandUpdate);
 }

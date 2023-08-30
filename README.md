@@ -56,6 +56,36 @@ command in the environment
 
 ## CI - CD
 
+### Generate the json schemas from pydantic classes
+
+This must be done every time some pydantic classes that will be instantiated from JSON files are modified (Action,
+Command, Plugin...) This will generate json schemas to have auto completion and validation when writing those JSONs
+
+```bash
+poetry run python .\scripts\generate_json_schemas.py
+```
+
+### Generate the protobufs from pydantic classes
+
+This is a helper script to generate from protobufs from the pydantic classes that will be sent via GRPC.
+
+> :warning: **Be carefull when modifing the protobufs** This script will regenerate protobufs without
+> taking in account the previous protobuf fields's numbers. If you want to modify those classes while maintaining
+> backward compatibility you will have to edit the protobufs manually. [see why field numbers are important](https://protobuf.dev/programming-guides/proto3/#assigning)
+> You can still use this script but just be aware that it might break compatibility with existing clients implementations
+
+```bash
+poetry run python .\scripts\generate_protobufs.py
+```
+
+### Generate the grpc endpoints from the protobufs
+
+You must run this script every type the protobufs are modified
+
+```bash
+poetry run python -m grpc_tools.protoc -I . --python_out=. --pyi_out=. --grpc_python_out=. zorro_core/network/protos/*.proto
+```
+
 ### Static type checking
 
 The static type checking is done via mypy
