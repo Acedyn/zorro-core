@@ -15,7 +15,7 @@ from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from zorro_core.network.protos import command_pb2 as zorro__core_dot_network_dot_protos_dot_command__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n1zorro_core/network/protos/scheduler_service.proto\x12\x05zorro\x1a\x1bgoogle/protobuf/empty.proto\x1a\'zorro_core/network/protos/command.proto2\xf1\x01\n\x0bZorroClient\x12H\n\x15GetNewCommandRequests\x12\x16.google.protobuf.Empty\x1a\x15.zorro.CommandRequest0\x01\x12L\n\x19GetRunningCommandRequests\x12\x16.google.protobuf.Empty\x1a\x15.zorro.CommandRequest0\x01\x12J\n\x18GetAndSendCommandUpdates\x12\x14.zorro.CommandUpdate\x1a\x14.zorro.CommandUpdate(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n1zorro_core/network/protos/scheduler_service.proto\x12\x05zorro\x1a\x1bgoogle/protobuf/empty.proto\x1a\'zorro_core/network/protos/command.proto\"\x10\n\x02ID\x12\n\n\x02id\x18\x01 \x01(\t2\xd6\x01\n\x11\x43ommandScheduling\x12.\n\nGetCommand\x12\t.zorro.ID\x1a\x15.zorro.CommandRequest\x12\x45\n\x12GetCommandRequests\x12\x16.google.protobuf.Empty\x1a\x15.zorro.CommandRequest0\x01\x12J\n\x18GetAndSendCommandUpdates\x12\x14.zorro.CommandUpdate\x1a\x14.zorro.CommandUpdate(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,6 +23,8 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'zorro_core.network.protos.s
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _globals['_ZORROCLIENT']._serialized_start=131
-  _globals['_ZORROCLIENT']._serialized_end=372
+  _globals['_ID']._serialized_start=130
+  _globals['_ID']._serialized_end=146
+  _globals['_COMMANDSCHEDULING']._serialized_start=149
+  _globals['_COMMANDSCHEDULING']._serialized_end=363
 # @@protoc_insertion_point(module_scope)

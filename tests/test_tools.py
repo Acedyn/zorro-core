@@ -17,30 +17,44 @@ async def test_action_traverse():
             "00-A": Action(
                 name="00-A",
                 children={
-                    "000-A": ActionCommand(name="000-A"),
-                    "001-A": ActionCommand(name="001-A", upstream="00-A"),
-                    "002-A": ActionCommand(name="002-A", upstream="01-A"),
+                    "000-A": ActionCommand(name="000-A", implementation_key=""),
+                    "001-A": ActionCommand(
+                        name="001-A", upstream="00-A", implementation_key=""
+                    ),
+                    "002-A": ActionCommand(
+                        name="002-A", upstream="01-A", implementation_key=""
+                    ),
                     "002-B": Action(
                         name="002-B",
                         upstream="01-A",
                         children={
-                            "0020-A": ActionCommand(name="0020-A"),
-                            "0020-B": ActionCommand(name="0020-B"),
+                            "0020-A": ActionCommand(
+                                name="0020-A", implementation_key=""
+                            ),
+                            "0020-B": ActionCommand(
+                                name="0020-B", implementation_key=""
+                            ),
                         },
                     ),
-                    "002-C": ActionCommand(name="002-A", upstream="01-A"),
-                    "002-D": ActionCommand(name="002-A", upstream="01-A"),
+                    "002-C": ActionCommand(
+                        name="002-A", upstream="01-A", implementation_key=""
+                    ),
+                    "002-D": ActionCommand(
+                        name="002-A", upstream="01-A", implementation_key=""
+                    ),
                 },
             ),
             "01-A": Action(
                 name="01-A",
                 upstream="0-A",
                 children={
-                    "010-A": ActionCommand(name="010-A"),
-                    "011-A": ActionCommand(name="011-A", upstream="10-A"),
+                    "010-A": ActionCommand(name="010-A", implementation_key=""),
+                    "011-A": ActionCommand(
+                        name="011-A", upstream="10-A", implementation_key=""
+                    ),
                 },
             ),
-            "01-B": ActionCommand(name="01-B", upstream="0-A"),
+            "01-B": ActionCommand(name="01-B", upstream="0-A", implementation_key=""),
         },
     )
 

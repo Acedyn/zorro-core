@@ -4,9 +4,10 @@ import grpc
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from zorro_core.network.protos import command_pb2 as zorro__core_dot_network_dot_protos_dot_command__pb2
+from zorro_core.network.protos import scheduler_service_pb2 as zorro__core_dot_network_dot_protos_dot_scheduler__service__pb2
 
 
-class ZorroClientStub(object):
+class CommandSchedulingStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -15,33 +16,33 @@ class ZorroClientStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetNewCommandRequests = channel.unary_stream(
-                '/zorro.ZorroClient/GetNewCommandRequests',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        self.GetCommand = channel.unary_unary(
+                '/zorro.CommandScheduling/GetCommand',
+                request_serializer=zorro__core_dot_network_dot_protos_dot_scheduler__service__pb2.ID.SerializeToString,
                 response_deserializer=zorro__core_dot_network_dot_protos_dot_command__pb2.CommandRequest.FromString,
                 )
-        self.GetRunningCommandRequests = channel.unary_stream(
-                '/zorro.ZorroClient/GetRunningCommandRequests',
+        self.GetCommandRequests = channel.unary_stream(
+                '/zorro.CommandScheduling/GetCommandRequests',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
                 response_deserializer=zorro__core_dot_network_dot_protos_dot_command__pb2.CommandRequest.FromString,
                 )
         self.GetAndSendCommandUpdates = channel.stream_stream(
-                '/zorro.ZorroClient/GetAndSendCommandUpdates',
+                '/zorro.CommandScheduling/GetAndSendCommandUpdates',
                 request_serializer=zorro__core_dot_network_dot_protos_dot_command__pb2.CommandUpdate.SerializeToString,
                 response_deserializer=zorro__core_dot_network_dot_protos_dot_command__pb2.CommandUpdate.FromString,
                 )
 
 
-class ZorroClientServicer(object):
+class CommandSchedulingServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def GetNewCommandRequests(self, request, context):
+    def GetCommand(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetRunningCommandRequests(self, request, context):
+    def GetCommandRequests(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -54,15 +55,15 @@ class ZorroClientServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_ZorroClientServicer_to_server(servicer, server):
+def add_CommandSchedulingServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetNewCommandRequests': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetNewCommandRequests,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            'GetCommand': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCommand,
+                    request_deserializer=zorro__core_dot_network_dot_protos_dot_scheduler__service__pb2.ID.FromString,
                     response_serializer=zorro__core_dot_network_dot_protos_dot_command__pb2.CommandRequest.SerializeToString,
             ),
-            'GetRunningCommandRequests': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetRunningCommandRequests,
+            'GetCommandRequests': grpc.unary_stream_rpc_method_handler(
+                    servicer.GetCommandRequests,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                     response_serializer=zorro__core_dot_network_dot_protos_dot_command__pb2.CommandRequest.SerializeToString,
             ),
@@ -73,16 +74,16 @@ def add_ZorroClientServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'zorro.ZorroClient', rpc_method_handlers)
+            'zorro.CommandScheduling', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class ZorroClient(object):
+class CommandScheduling(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetNewCommandRequests(request,
+    def GetCommand(request,
             target,
             options=(),
             channel_credentials=None,
@@ -92,14 +93,14 @@ class ZorroClient(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/zorro.ZorroClient/GetNewCommandRequests',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        return grpc.experimental.unary_unary(request, target, '/zorro.CommandScheduling/GetCommand',
+            zorro__core_dot_network_dot_protos_dot_scheduler__service__pb2.ID.SerializeToString,
             zorro__core_dot_network_dot_protos_dot_command__pb2.CommandRequest.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetRunningCommandRequests(request,
+    def GetCommandRequests(request,
             target,
             options=(),
             channel_credentials=None,
@@ -109,7 +110,7 @@ class ZorroClient(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/zorro.ZorroClient/GetRunningCommandRequests',
+        return grpc.experimental.unary_stream(request, target, '/zorro.CommandScheduling/GetCommandRequests',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             zorro__core_dot_network_dot_protos_dot_command__pb2.CommandRequest.FromString,
             options, channel_credentials,
@@ -126,7 +127,7 @@ class ZorroClient(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.stream_stream(request_iterator, target, '/zorro.ZorroClient/GetAndSendCommandUpdates',
+        return grpc.experimental.stream_stream(request_iterator, target, '/zorro.CommandScheduling/GetAndSendCommandUpdates',
             zorro__core_dot_network_dot_protos_dot_command__pb2.CommandUpdate.SerializeToString,
             zorro__core_dot_network_dot_protos_dot_command__pb2.CommandUpdate.FromString,
             options, channel_credentials,
