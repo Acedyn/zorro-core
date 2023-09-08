@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-core";
+
+import "internal/tools/tool.proto";
+
+message CommandImplementation {
+  // The path to the implementation file
+  string path = 1;
+}
+
+message Command {
+  // All tools are composed of this field that contains required infos
+  zorro.ToolBase base = 1;
+  optional CommandImplementation implementation = 2;
+}

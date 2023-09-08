@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-core";
+
+// Modifications for a environment variabme by a plugins
+message PluginEnv {
+  // Paths to append to the existing paths for path environment variable
+  repeated string append = 1;
+  // Paths to prepend to the existing paths for path environment variable
+  repeated string prepend = 2;
+  // For regular environment variable, the value to set
+  optional string set = 3;
+}
+
+// Where to look for tool declarations
+message PluginTools {
+  repeated string commands = 1;
+  repeated string actions = 2;
+  repeated string hooks = 3;
+  repeated string widgets = 4;
+}
+
+// Defines which clients are available to launch. Clients are
+// responsible for executing commands
+message ClientDeclaration {
+  // The name of the executable
+  string name = 1;
+  // Used to differentiate two same clients with a different version
+  string version = 2;
+  // User friently version of the name without all its contraints
+  optional string label = 3;
+  // Paths where we should look for the executable
+  repeated string paths = 4;
+  // Defines if this client can be used as a substitute for other clients
+  repeated string subsets = 5;
+  // Template to launch the program without the client running
+  string launch_program_template = 6;
+  // Template to launch the program with the client running
+  string launch_client_template = 7;
+}
+
+// Plugins register a set of tools, environment variables and clients.
+// A set of tools will define what interactions are available or not.
+message Plugin {
+  // The name should be unique and be as simple as possible
+  string name = 1;
+  // The version is composed of multiple subversions separated with a dot
+  string version = 2;
+  // User friently version of the name without all its contraints
+  optional string label = 3;
+  // A list of plugin request that needs to be resolved for this plugin
+  repeated string require = 4;
+  // Each plugins will alter the environment generated
+  map<string, zorro.PluginEnv> env = 5;
+  // Each plugins will alter the environment generated
+  zorro.PluginTools tools = 6;
+  // List of clients to register as available clients to launch
+  repeated zorro.ClientDeclaration clients = 7;
+}
