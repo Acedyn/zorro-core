@@ -68,6 +68,7 @@ func (x *CommandImplementation) GetPath() string {
 	return ""
 }
 
+// A command is a task that will be sent to a client to be executed.
 type Command struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
