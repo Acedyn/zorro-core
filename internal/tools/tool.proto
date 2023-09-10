@@ -1,9 +1,9 @@
 syntax = "proto3";
 
 package zorro;
-option go_package = "github.com/Acedyn/zorro-core";
+option go_package = "github.com/Acedyn/zorro-core/internal/tools";
 
-// List of all the possible
+// List of all the possible tools
 enum ToolType {
   COMMAND = 0;
   ACTION = 1;
