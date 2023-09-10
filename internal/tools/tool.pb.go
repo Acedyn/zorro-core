@@ -20,7 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// List of all the possible
+// List of all the possible tools
 type ToolType int32
 
 const (
