@@ -34,12 +34,20 @@ To run the unit test use:
 go test ./...
 ```
 
-I like to use a unit test formater like [gotestsum](https://github.com/gotestyourself/gotestsum)
+You might want to use a unit test formater like [gotestsum](https://github.com/gotestyourself/gotestsum)
 
 ```bash
 gotestsum --format dots
 ```
 
+#### Formater
+
+The formater used is [gofumpt](https://github.com/mvdan/gofumpt)
+Make sure to format your code either by configuring your IDE or executing
+
+```bash
+gofumpt -l -w .
+```
 
 ### Protobufs
 
