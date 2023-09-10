@@ -1,13 +1,72 @@
 package context
 
 import (
-  "testing"
+	"os"
+	"path/filepath"
+  "strings"
+	"reflect"
+	"testing"
 )
 
-func TestLoadPluginFromFile(t *testing.T) {
-  
+type loadPluginFromFileTest struct {
+  ExpectedName string
+  ExpectedVersion string
+  ExpectedLabel string
+  ExpectedCommands []string
+  ExpectedActions []string
+  ExpectedRequire []string
 }
 
+var loadPluginFromFileTests = map[string]*loadPluginFromFileTest{
+  "foo/foo@3.1/zorro-plugin.json": {
+    ExpectedName: "foo",
+    ExpectedLabel: "The foo plugin",
+    ExpectedCommands: []string{"./commands"},
+    ExpectedActions: []string{"./actions"},
+  },
+  "baz/baz@5.2/zorro-plugin.json": {
+    ExpectedName: "baz",
+    ExpectedCommands: []string{"./commands"},
+    ExpectedActions: []string{"./actions"},
+    ExpectedRequire: []string{"foo>=5.3"},
+  },
+}
+
+// Test if the loaded plugins correspond to the file's content
+func TestLoadPluginFromFile(t *testing.T) {
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		t.Errorf("Could not get the current working directory\n\t%s", err)
+	}
+	cwdPath = filepath.Dir(filepath.Dir(strings.ReplaceAll(cwdPath, string(os.PathSeparator), "/")))
+
+  for path, expectedPlugin := range loadPluginFromFileTests {
+    fullPath := filepath.Join(cwdPath, "test", "mock", path)
+    loadedPlugin, err := LoadPluginFromFile(fullPath)
+
+    if err != nil {
+      t.Errorf("An error occured while loading the plugin at path %s\n\t%s", path, err)
+    }
+
+    if loadedPlugin.Name != expectedPlugin.ExpectedName {
+      t.Errorf("Incorrect name loaded on the plugin at path %s", path)
+    }
+    if loadedPlugin.GetLabel() != expectedPlugin.ExpectedLabel {
+      t.Errorf("Incorrect label loaded on the plugin at path %s", path)
+    }
+    if !reflect.DeepEqual(loadedPlugin.Tools.Commands, expectedPlugin.ExpectedCommands) {
+      t.Errorf("Incorrect commands loaded on the plugin at path %s", path)
+    }
+    if !reflect.DeepEqual(loadedPlugin.Tools.Actions, expectedPlugin.ExpectedActions) {
+      t.Errorf("Incorrect actions loaded on the plugin at path %s", path)
+    }
+    if !reflect.DeepEqual(loadedPlugin.Require, expectedPlugin.ExpectedRequire) {
+      t.Errorf("Incorrect require loaded on the plugin at path %s", path)
+    }
+  }
+}
+
+// Test the loading of a bare plugin
 func TestLoadPluginBare(t *testing.T) {
   pluginPath := "/foo/bar@1.2/zorro-plugin.json"
   plugin := LoadPluginBare(pluginPath)
@@ -21,6 +80,7 @@ func TestLoadPluginBare(t *testing.T) {
   }
 }
 
+// Test the default initialization of a plugin's field
 func TestPluginInit(t *testing.T) {
   pluginPath := "/foo/bar/zorro-plugin.json"
   plugin := &Plugin{
