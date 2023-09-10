@@ -1,0 +1,7 @@
+{
+  "label": "The foo plugin",
+  "tools": {
+    "commands": ["./commands"],
+    "actions": ["./actions"]
+  }
+}

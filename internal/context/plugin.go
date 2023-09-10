@@ -21,7 +21,7 @@ func(plugin *Plugin) InitFields() {
   // Build the default label if none is set
   if plugin.Label == nil {
     caser := cases.Title(config.GetLanguage())
-    generatedLabel := caser.String(strings.Replace(plugin.GetName(), "_", " ", -1))
+    generatedLabel := caser.String(strings.ReplaceAll(plugin.GetName(), "_", " "))
     plugin.Label = &generatedLabel
   }
 
