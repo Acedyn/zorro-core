@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package zorro;
-option go_package = "github.com/Acedyn/zorro-core";
+option go_package = "github.com/Acedyn/zorro-core/internal/context";
 
 // Modifications for a environment variabme by a plugins
 message PluginEnv {
@@ -49,12 +49,14 @@ message Plugin {
   string version = 2;
   // User friently version of the name without all its contraints
   optional string label = 3;
+  // The path to the plugin definition
+  optional string path = 4;
   // A list of plugin request that needs to be resolved for this plugin
-  repeated string require = 4;
+  repeated string require = 5;
   // Each plugins will alter the environment generated
-  map<string, zorro.PluginEnv> env = 5;
+  map<string, zorro.PluginEnv> env = 6;
   // Each plugins will alter the environment generated
-  zorro.PluginTools tools = 6;
+  optional zorro.PluginTools tools = 7;
   // List of clients to register as available clients to launch
-  repeated zorro.ClientDeclaration clients = 7;
+  repeated zorro.ClientDeclaration clients = 8;
 }

@@ -24,11 +24,28 @@ Tools can be composed of each other, there is higher level type of tools than ot
 
 ## Get started
 
+### CI / CD
+
+#### Unit tests
+
+To run the unit test use:
+
+```bash
+go test ./...
+```
+
+I like to use a unit test formater like [gotestsum](https://github.com/gotestyourself/gotestsum)
+
+```bash
+gotestsum --format dots
+```
+
+
 ### Protobufs
 
 #### Install protoc
 
-- Install the (protoc executable)[https://protobuf.dev/downloads]
+- Install the [protoc executable](https://protobuf.dev/downloads)
 - Install the golang protoc generator
 
 ```bash
@@ -41,8 +58,8 @@ This project is using [protobufs](https://protobuf.dev/) for a lots of struct de
 modifications if a proto buffer make sure to regenerate the structs
 
 ```bash
-protoc --go_out=. --go_opt=paths=source_relative .\internal\tools\*.proto
-protoc --go_out=. --go_opt=paths=source_relative .\internal\context\*.proto
+protoc --go_out=. --go_opt=paths=source_relative ./internal/tools/*.proto
+protoc --go_out=. --go_opt=paths=source_relative ./internal/context/*.proto
 ```
 
 Since the proto files are importing each other it is a good idea to regenerate everything when
