@@ -16,7 +16,14 @@ message UserConfig {
   zorro.Language language = 1;
 }
 
+// Config related to the plugins
+message PluginConfig {
+  repeated string default_require = 1;
+  repeated string plugin_paths = 2;
+}
+
 // Global config of the application
 message Config {
   UserConfig user_preferences = 1;
+  PluginConfig plugin_config = 2;
 }
