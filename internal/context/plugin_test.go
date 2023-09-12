@@ -4,10 +4,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 )
 
+// Test if the loaded plugins correspond to the file's content
 type loadPluginFromFileTest struct {
 	ExpectedName     string
 	ExpectedVersion  string
@@ -32,13 +32,12 @@ var loadPluginFromFileTests = map[string]*loadPluginFromFileTest{
 	},
 }
 
-// Test if the loaded plugins correspond to the file's content
 func TestLoadPluginFromFile(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(strings.ReplaceAll(cwdPath, string(os.PathSeparator), "/")))
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 
 	for path, expectedPlugin := range loadPluginFromFileTests {
 		fullPath := filepath.Join(cwdPath, "test", "mock", path)
@@ -80,27 +79,30 @@ func TestLoadPluginBare(t *testing.T) {
 }
 
 // Test the default initialization of a plugin's field
-func TestPluginInit(t *testing.T) {
-	pluginPath := "/foo/bar/zorro-plugin.json"
-	plugin := &Plugin{
+var pluginInitTests = map[string]*Plugin{
+	"/foo/bar/zorro-plugin.json": {
 		Name: "foo_bar",
-		Path: &pluginPath,
 		Tools: &PluginTools{
 			Commands: []string{"./commands", "/foo/commands"},
 		},
-	}
+	},
+}
 
-	plugin.InitFields()
+func TestPluginInit(t *testing.T) {
+	for pluginPath, pluginTest := range pluginInitTests {
+		pluginTest.Path = &pluginPath
+		pluginTest.InitFields()
 
-	if *plugin.Label != "Foo Bar" {
-		t.Errorf("Invalid plugin label initialized: %s", *plugin.Label)
-	}
+		if *pluginTest.Label != "Foo Bar" {
+			t.Errorf("Invalid plugin label initialized: %s", *pluginTest.Label)
+		}
 
-	if plugin.Tools.Commands[0] != "/foo/bar/commands" {
-		t.Errorf("Invalid plugin command paths initialized: %s", plugin.Tools.Commands)
-	}
+		if pluginTest.Tools.Commands[0] != filepath.Join("/foo/bar/commands") {
+			t.Errorf("Invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[0])
+		}
 
-	if plugin.Tools.Commands[1] != "/foo/commands" {
-		t.Errorf("Invalid plugin command paths initialized: %s", plugin.Tools.Commands)
+		if pluginTest.Tools.Commands[1] != filepath.Join("/foo/commands") {
+			t.Errorf("Invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[1])
+		}
 	}
 }
