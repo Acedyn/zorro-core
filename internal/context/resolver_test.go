@@ -46,7 +46,7 @@ func TestGetAllPluginVersion(t *testing.T) {
 	fullPath := filepath.Join(cwdPath, "test", "mock")
 
 	for name, expectedPluginCount := range getAllPluginVersionsTests {
-		plugins := GetAllPluginVersion(name, &config.PluginConfig{
+		plugins := FindPluginVersion(name, &config.PluginConfig{
 			PluginPaths: []string{fullPath},
 		})
 
