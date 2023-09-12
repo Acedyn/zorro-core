@@ -37,12 +37,17 @@ func (plugin *Plugin) InitFields() {
 			tool[index] = plugin.resolveRelativePath(tool_path)
 		}
 	}
+
+	// Normalize the path to be specific to the current os
+	normalizedPath := filepath.Join(plugin.GetPath())
+	plugin.Path = &normalizedPath
 }
 
 // Expand the path, relative to the plugin
 func (plugin *Plugin) resolveRelativePath(path string) string {
 	if filepath.IsAbs(path) {
-		return path
+		// Normalize the path
+		return filepath.Join(path)
 	}
 
 	return filepath.Join(filepath.Dir(plugin.GetPath()), path)
