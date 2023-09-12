@@ -107,7 +107,7 @@ func ParseVersionQuery(query string) *VersionQuery {
 }
 
 // Find all available plugin versions with the given name
-func GetAllPluginVersion(name string, pluginConfig *config.PluginConfig) []*Plugin {
+func FindPluginVersion(name string, pluginConfig *config.PluginConfig) []*Plugin {
 	if pluginConfig == nil {
 		pluginConfig = config.AppConfig().PluginConfig
 	}
@@ -144,7 +144,7 @@ func GetQueryMatchingQuery(queries []string, pluginConfig *config.PluginConfig) 
 			pluginVersion[versionQuery.Name] = []*Plugin{}
 		}
 
-		for _, plugin := range GetAllPluginVersion(versionQuery.Name, pluginConfig) {
+		for _, plugin := range FindPluginVersion(versionQuery.Name, pluginConfig) {
 			if versionQuery.Match(plugin) {
 				pluginVersion[versionQuery.Name] = append(pluginVersion[versionQuery.Name], plugin)
 			}
