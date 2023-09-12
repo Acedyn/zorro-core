@@ -1,6 +1,7 @@
 package context
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -111,7 +112,7 @@ func FindPluginVersions(name string, pluginConfig *config.PluginConfig) []*Plugi
 	if pluginConfig == nil {
 		pluginConfig = config.AppConfig().PluginConfig
 	}
-	plugins := []*Plugin{}
+	versions := []*Plugin{}
 
 	for _, pluginSearchPath := range pluginConfig.PluginPaths {
 		err := filepath.WalkDir(pluginSearchPath, func(path string, f os.DirEntry, _ error) error {
@@ -119,23 +120,22 @@ func FindPluginVersions(name string, pluginConfig *config.PluginConfig) []*Plugi
 			if pathStem == PLUGIN_DEFINITION_NAME {
 				plugin := LoadPluginBare(path)
 				if plugin.GetName() == name {
-					plugins = append(plugins, LoadPluginBare(path))
+					versions = append(versions, LoadPluginBare(path))
 				}
 				return filepath.SkipDir
 			}
 			return nil
 		})
-
 		if err != nil {
 			utils.Logger().Warn("An error occured while looking for plugins in path %s:\n\t%s", pluginSearchPath, err)
 		}
 	}
 
-	return plugins
+	return versions
 }
 
 // Get all available plugins that could be potential candidates to satisfy the query
-func GetQueryMatchingQuery(queries []string, pluginConfig *config.PluginConfig) map[string][]*Plugin {
+func GetQueryMatchingPlugins(queries []string, pluginConfig *config.PluginConfig) map[string][]*Plugin {
 	pluginVersion := map[string][]*Plugin{}
 
 	for _, query := range queries {
@@ -156,30 +156,31 @@ func GetQueryMatchingQuery(queries []string, pluginConfig *config.PluginConfig) 
 
 // When multiple plugin versions are potential quantidates, we use the
 // lasted version of them.
-func GetPreferedPluginVersion(plugins []*Plugin) *Plugin {
-	if len(plugins) == 0 {
-		return nil
+func GetPreferedPluginVersion(versions []*Plugin) (*Plugin, int) {
+	if len(versions) == 0 {
+		return nil, 0
 	}
 
-	preferedPlugin := plugins[0]
-	for _, plugin := range plugins {
+	preferedIndex := 0
+	for pluginIndex, plugin := range versions {
+	  preferedPlugin := versions[preferedIndex]
 		versionComparison := CompareVersions(plugin.GetVersion(), preferedPlugin.GetVersion())
 
 		switch versionComparison {
 		// If the version is higher the plugin take the spot of the prefered plugin
 		case VersionOperator_MORE_EQUAL:
-			preferedPlugin = plugin
-		// For equal plugins the more precise one win
+	    preferedIndex = pluginIndex
+		// For equal versions the more precise one win
 		case VersionOperator_EQUAL:
 			splittedPreferedVersion := strings.Split(preferedPlugin.GetVersion(), VERSION_ITEM_SEPARATOR)
 			splittedVersion := strings.Split(plugin.GetVersion(), VERSION_ITEM_SEPARATOR)
 			if len(splittedVersion) > len(splittedPreferedVersion) {
-				preferedPlugin = plugin
+	      preferedIndex = pluginIndex
 			}
 		}
 	}
 
-	return preferedPlugin
+	return versions[preferedIndex], preferedIndex
 }
 
 // Create a new quandidate set with only quandidates that are present in both sets.
@@ -229,3 +230,85 @@ func intersectQuandidates(quandidatesA, quandidatesB map[string][]*Plugin) map[s
 
 	return intersectedCandidates
 }
+
+// Recursive function that will select a plugin version from quandidates
+// and add its dependencies to the quandidates until a valid version is found
+func resolvePluginVersion(
+  name string, 
+  quandidates map[string][]*Plugin, 
+  pluginConfig *config.PluginConfig,
+) (*Plugin, error) {
+	versions, ok := quandidates[name]
+	if len(versions) == 0 || !ok {
+		return nil, fmt.Errorf("No quandidates available for plugin %s", name)
+	}
+
+	// Reload the plugin to make sure it's not bare
+  preferedVersion, preferedVersionIndex := GetPreferedPluginVersion(versions)
+	plugin, error := LoadPluginFromFile(preferedVersion.GetPath())
+	if error != nil {
+		return nil, fmt.Errorf("Could not load reload plugin %s: %w", name, error)
+	}
+
+	// We don't want to keep the quandidates does not match
+	// the current requirements
+	requirementQuandidates := GetQueryMatchingPlugins(plugin.GetRequire(), pluginConfig)
+	newQuandidates := intersectQuandidates(quandidates, requirementQuandidates)
+
+	// The prefered plugin's requirement might not be compatible with
+	// the currently selected quandidate
+	for _, quandidateVersions := range newQuandidates {
+		// If a plugin does not have any quandidate versions anymore
+		// we must look for a different combinason
+		if len(quandidateVersions) == 0 {
+      // Remove the selected version so it is not selected next time
+      versions[preferedVersionIndex] = versions[len(versions) - 1]
+      quandidates[name] = versions[:len(versions) - 1]
+			return resolvePluginVersion(name, quandidates, pluginConfig)
+		}
+	}
+
+  // Copy the new quandidates over the current quandidates
+  for key, value := range newQuandidates {
+    quandidates[key] = value
+  }
+  return plugin, nil
+}
+
+// Recusive function that will select a quandidates and resolve its dependencies.
+// It will try every possible combinason until a valid one is fund
+func resolvePluginGraph(
+  quandidates map[string][]*Plugin, 
+  completed []string,
+  pluginConfig *config.PluginConfig,
+) error {
+	if completed == nil {
+    completed = []string{}
+	}
+
+  // Select the next plugin that needs to be resolved
+  var pluginToResolve *string = nil
+  for quandidateName := range quandidates {
+    for _, completedPlugin := range completed {
+      if quandidateName == completedPlugin {
+        break
+      }
+    }
+    pluginToResolve = &quandidateName
+  }
+
+  // There is not plugins to resolve anymore, the resolution is complete
+  if pluginToResolve == nil {
+    return nil
+  }
+  return nil
+}
+
+func ResolvePlugins(query string, pluginConfig *config.PluginConfig) []*Plugin {
+	if pluginConfig == nil {
+		pluginConfig = config.AppConfig().PluginConfig
+	}
+
+  return nil
+}
+
