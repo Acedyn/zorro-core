@@ -78,7 +78,7 @@ type VersionQuery struct {
 
 // Test if the given plugin satisfies the query
 func (versionQuery *VersionQuery) Match(plugin *Plugin) bool {
-	versionComparison := CompareVersions(versionQuery.Version, plugin.GetVersion())
+	versionComparison := CompareVersions(plugin.GetVersion(), versionQuery.Version)
 
 	if versionComparison == versionQuery.Operator {
 		return true
@@ -263,13 +263,17 @@ func resolvePluginVersion(
 // It will try every possible combinason until a valid one is fund
 func resolvePluginGraph(
 	quandidates map[string][]*Plugin,
+	completed map[string]bool,
 	pluginConfig *config.PluginConfig,
 ) (map[string][]*Plugin, error) {
+	if completed == nil {
+		completed = map[string]bool{}
+	}
 
 	// Select the next plugin that needs to be resolved
 	var pluginToResolve *string = nil
-	for quandidateName, quandidateVersions := range quandidates {
-		if len(quandidateVersions) > 1 {
+	for quandidateName := range quandidates {
+		if _, ok := completed[quandidateName]; ok {
 			pluginToResolve = &quandidateName
 		}
 	}
@@ -283,6 +287,8 @@ func resolvePluginGraph(
 	newQuandidates := quandidates
 	var iterErr error = nil
 
+	completed[*pluginToResolve] = true
+
 	// Try to resolve a different plugin version until a valid graph is resolved
 	for len(quandidates[*pluginToResolve]) > versionIndex {
 		versionIndex, newQuandidates, iterErr = resolvePluginVersion(*pluginToResolve, versionIndex+1, quandidates, pluginConfig)
@@ -292,15 +298,20 @@ func resolvePluginGraph(
 		}
 
 		// First check if the resolved plugin resulted in a valid graph
+		isValidGraph := true
 		for pluginName, quandidateVersions := range newQuandidates {
 			if len(quandidateVersions) == 0 {
 				utils.Logger().Debug(fmt.Sprintf("Skipping plugin version %d: invalid resolved graph (no valid quandidates for plugin %s)", versionIndex, pluginName))
-				continue
+				isValidGraph = false
+				break
 			}
+		}
+		if !isValidGraph {
+			continue
 		}
 
 		// Continue to resolve the graph
-		if newQuandidates, err := resolvePluginGraph(newQuandidates, pluginConfig); err != nil {
+		if newQuandidates, err := resolvePluginGraph(newQuandidates, completed, pluginConfig); err != nil {
 			utils.Logger().Debug(fmt.Sprintf("Skipping plugin versions %d: no graph combinason could be resolved", versionIndex))
 			continue
 		} else {
@@ -319,7 +330,7 @@ func ResolvePlugins(query []string, pluginConfig *config.PluginConfig) ([]*Plugi
 	}
 
 	initialQuandidates := GetQueryMatchingPlugins(query, pluginConfig)
-	resolvedGraph, err := resolvePluginGraph(initialQuandidates, pluginConfig)
+	resolvedGraph, err := resolvePluginGraph(initialQuandidates, nil, pluginConfig)
 	if err != nil {
 		return nil, fmt.Errorf("Plugin graph resolution imposible for query %s: %w", query, err)
 	}

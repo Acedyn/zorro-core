@@ -3,6 +3,7 @@ package context
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Acedyn/zorro-core/internal/config"
@@ -42,7 +43,6 @@ func TestGetAllPluginVersion(t *testing.T) {
 		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-
 	fullPath := filepath.Join(cwdPath, "test", "mock")
 
 	for name, expectedPluginCount := range getAllPluginVersionsTests {
@@ -53,5 +53,40 @@ func TestGetAllPluginVersion(t *testing.T) {
 		if expectedPluginCount != len(plugins) {
 			t.Errorf("incorrect count of plugin found: %d (expected %d)", len(plugins), expectedPluginCount)
 		}
+	}
+}
+
+var pluginResolutionTests = map[string]map[string]string{
+	"foo>=3.0.3 bar==2.3 baz<=5.6": {
+		"foo": "3.2",
+		"bar": "2.3",
+		"baz": "3.1",
+	},
+	"foo>=3.2 foo<=3.8": {
+		"foo": "3.2",
+	},
+}
+
+func TestPluginResolution(t *testing.T) {
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		t.Errorf("could not get the current working directory\n\t%s", err)
+	}
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	fullPath := filepath.Join(cwdPath, "test", "mock")
+
+	for pluginQuery := range pluginResolutionTests {
+		query := strings.Split(pluginQuery, " ")
+		_, err := ResolvePlugins(query, &config.PluginConfig{
+			PluginPaths: []string{fullPath},
+		})
+
+		if err != nil {
+			t.Errorf("Could not resolve plugin graph: %s", err.Error())
+			continue
+		}
+
+		t.Errorf("debug")
+		break
 	}
 }
