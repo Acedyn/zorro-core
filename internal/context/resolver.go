@@ -237,20 +237,20 @@ func resolvePluginVersion(
   name string, 
   quandidates map[string][]*Plugin, 
   pluginConfig *config.PluginConfig,
-) (*Plugin, error) {
+) (*Plugin, map[string][]*Plugin, error) {
 	versions, ok := quandidates[name]
 	if len(versions) == 0 || !ok {
-		return nil, fmt.Errorf("No quandidates available for plugin %s", name)
+		return nil, nil, fmt.Errorf("no quandidates available for plugin %s", name)
 	}
 
 	// Reload the plugin to make sure it's not bare
   preferedVersion, preferedVersionIndex := GetPreferedPluginVersion(versions)
 	plugin, error := LoadPluginFromFile(preferedVersion.GetPath())
 	if error != nil {
-		return nil, fmt.Errorf("Could not load reload plugin %s: %w", name, error)
+		return nil, nil, fmt.Errorf("could not load plugin %s: %w", name, error)
 	}
 
-	// We don't want to keep the quandidates does not match
+	// We don't want to keep the quandidates that does not match
 	// the current requirements
 	requirementQuandidates := GetQueryMatchingPlugins(plugin.GetRequire(), pluginConfig)
 	newQuandidates := intersectQuandidates(quandidates, requirementQuandidates)
@@ -268,40 +268,39 @@ func resolvePluginVersion(
 		}
 	}
 
-  // Copy the new quandidates over the current quandidates
-  for key, value := range newQuandidates {
-    quandidates[key] = value
-  }
-  return plugin, nil
+  newQuandidates[name] = []*Plugin{plugin}
+  return plugin, newQuandidates, nil
 }
 
 // Recusive function that will select a quandidates and resolve its dependencies.
 // It will try every possible combinason until a valid one is fund
 func resolvePluginGraph(
   quandidates map[string][]*Plugin, 
-  completed []string,
   pluginConfig *config.PluginConfig,
-) error {
-	if completed == nil {
-    completed = []string{}
-	}
+) (map[string][]*Plugin, error) {
 
   // Select the next plugin that needs to be resolved
   var pluginToResolve *string = nil
-  for quandidateName := range quandidates {
-    for _, completedPlugin := range completed {
-      if quandidateName == completedPlugin {
-        break
-      }
+  for quandidateName, quandidateVersions := range quandidates {
+    if len(quandidateVersions) > 1 {
+      pluginToResolve = &quandidateName
     }
-    pluginToResolve = &quandidateName
   }
 
   // There is not plugins to resolve anymore, the resolution is complete
   if pluginToResolve == nil {
-    return nil
+    return nil, nil
   }
-  return nil
+
+  _, newQuandidates, err := resolvePluginVersion(*pluginToResolve, quandidates, pluginConfig)
+
+  // If no valid plugins where found, it means this path is impossible to
+  // resolve and we should try an other combinason
+  if err != nil {
+    return nil, fmt.Errorf("no valid version found for plugin %s: invalid combinason (%w)", *pluginToResolve, err)
+  }
+
+  return newQuandidates, nil
 }
 
 func ResolvePlugins(query string, pluginConfig *config.PluginConfig) []*Plugin {
