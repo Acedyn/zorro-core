@@ -42,14 +42,14 @@ func (plugin *Plugin) InitFields() {
 	normalizedPath := filepath.Join(plugin.GetPath())
 	plugin.Path = &normalizedPath
 
-  // Make sure the plugin doesn't require itself
-  filteredRequires := make([]string, len(plugin.GetRequire()))
-  for _, requirement := range plugin.GetRequire() {
-    if ParseVersionQuery(requirement).Name != plugin.GetName() {
-      filteredRequires = append(filteredRequires, requirement)
-    }
-  }
-  plugin.Require = filteredRequires
+	// Make sure the plugin doesn't require itself
+	filteredRequires := make([]string, 0, len(plugin.GetRequire()))
+	for _, requirement := range plugin.GetRequire() {
+		if ParseVersionQuery(requirement).Name != plugin.GetName() {
+			filteredRequires = append(filteredRequires, requirement)
+		}
+	}
+	plugin.Require = filteredRequires
 }
 
 // Expand the path, relative to the plugin
@@ -111,5 +111,6 @@ func LoadPluginFromJson(config []byte, plugin *Plugin) (*Plugin, error) {
 		return nil, fmt.Errorf("invalid plugin json config (%s): %w", plugin.Name, err)
 	}
 
+	plugin.InitFields()
 	return plugin, nil
 }
