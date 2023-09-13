@@ -41,6 +41,15 @@ func (plugin *Plugin) InitFields() {
 	// Normalize the path to be specific to the current os
 	normalizedPath := filepath.Join(plugin.GetPath())
 	plugin.Path = &normalizedPath
+
+  // Make sure the plugin doesn't require itself
+  filteredRequires := make([]string, len(plugin.GetRequire()))
+  for _, requirement := range plugin.GetRequire() {
+    if ParseVersionQuery(requirement).Name != plugin.GetName() {
+      filteredRequires = append(filteredRequires, requirement)
+    }
+  }
+  plugin.Require = filteredRequires
 }
 
 // Expand the path, relative to the plugin
@@ -72,14 +81,14 @@ func LoadPluginBare(path string) *Plugin {
 func LoadPluginFromFile(path string) (*Plugin, error) {
 	fileHandle, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("Could not open file (%s): %w", path, err)
+		return nil, fmt.Errorf("could not open file (%s): %w", path, err)
 	}
 	defer fileHandle.Close()
 
 	// Parse the plugin data
 	fileData, err := io.ReadAll(fileHandle)
 	if err != nil {
-		return nil, fmt.Errorf("Could not read config file (%s): %w", path, err)
+		return nil, fmt.Errorf("could not read config file (%s): %w", path, err)
 	}
 
 	// Handle multiple file types
@@ -88,7 +97,7 @@ func LoadPluginFromFile(path string) (*Plugin, error) {
 	case ".json":
 		return LoadPluginFromJson(fileData, plugin)
 	default:
-		return nil, fmt.Errorf("Unhandled filetype for plugin file (%s)", filepath.Ext(path))
+		return nil, fmt.Errorf("unhandled filetype for plugin file (%s)", filepath.Ext(path))
 	}
 }
 
@@ -99,7 +108,7 @@ func LoadPluginFromJson(config []byte, plugin *Plugin) (*Plugin, error) {
 	}
 	err := json.Unmarshal(config, plugin)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid plugin json config (%s): %w", plugin.Name, err)
+		return nil, fmt.Errorf("invalid plugin json config (%s): %w", plugin.Name, err)
 	}
 
 	return plugin, nil

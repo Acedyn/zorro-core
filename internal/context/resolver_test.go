@@ -24,7 +24,7 @@ func TestVersionComparison(t *testing.T) {
 	for comparison, expectedResult := range versionComparisonsTests {
 		result := CompareVersions(comparison.a, comparison.b)
 		if result != expectedResult {
-			t.Errorf("Invalid version comparison result: %s %s %s (expected: %s)", comparison.a, result, comparison.b, expectedResult)
+			t.Errorf("invalid version comparison result: %s %s %s (expected: %s)", comparison.a, result, comparison.b, expectedResult)
 		}
 	}
 }
@@ -39,7 +39,7 @@ var getAllPluginVersionsTests = map[string]int{
 func TestGetAllPluginVersion(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
-		t.Errorf("Could not get the current working directory\n\t%s", err)
+		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 
@@ -51,7 +51,7 @@ func TestGetAllPluginVersion(t *testing.T) {
 		})
 
 		if expectedPluginCount != len(plugins) {
-			t.Errorf("Incorrect count of plugin found: %d (expected %d)", len(plugins), expectedPluginCount)
+			t.Errorf("incorrect count of plugin found: %d (expected %d)", len(plugins), expectedPluginCount)
 		}
 	}
 }

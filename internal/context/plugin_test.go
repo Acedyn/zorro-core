@@ -35,7 +35,7 @@ var loadPluginFromFileTests = map[string]*loadPluginFromFileTest{
 func TestLoadPluginFromFile(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
-		t.Errorf("Could not get the current working directory\n\t%s", err)
+		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 
@@ -43,23 +43,23 @@ func TestLoadPluginFromFile(t *testing.T) {
 		fullPath := filepath.Join(cwdPath, "test", "mock", path)
 		loadedPlugin, err := LoadPluginFromFile(fullPath)
 		if err != nil {
-			t.Errorf("An error occured while loading the plugin at path %s\n\t%s", path, err)
+			t.Errorf("an error occured while loading the plugin at path %s\n\t%s", path, err)
 		}
 
 		if loadedPlugin.Name != expectedPlugin.ExpectedName {
-			t.Errorf("Incorrect name loaded on the plugin at path %s", path)
+			t.Errorf("incorrect name loaded on the plugin at path %s", path)
 		}
 		if loadedPlugin.GetLabel() != expectedPlugin.ExpectedLabel {
-			t.Errorf("Incorrect label loaded on the plugin at path %s", path)
+			t.Errorf("incorrect label loaded on the plugin at path %s", path)
 		}
 		if !reflect.DeepEqual(loadedPlugin.Tools.Commands, expectedPlugin.ExpectedCommands) {
-			t.Errorf("Incorrect commands loaded on the plugin at path %s", path)
+			t.Errorf("incorrect commands loaded on the plugin at path %s", path)
 		}
 		if !reflect.DeepEqual(loadedPlugin.Tools.Actions, expectedPlugin.ExpectedActions) {
-			t.Errorf("Incorrect actions loaded on the plugin at path %s", path)
+			t.Errorf("incorrect actions loaded on the plugin at path %s", path)
 		}
 		if !reflect.DeepEqual(loadedPlugin.Require, expectedPlugin.ExpectedRequire) {
-			t.Errorf("Incorrect require loaded on the plugin at path %s", path)
+			t.Errorf("incorrect require loaded on the plugin at path %s", path)
 		}
 	}
 }
@@ -70,11 +70,11 @@ func TestLoadPluginBare(t *testing.T) {
 	plugin := LoadPluginBare(pluginPath)
 
 	if plugin.Name != "bar" {
-		t.Errorf("Invalid bare plugin's name loaded: %s", plugin.Name)
+		t.Errorf("invalid bare plugin's name loaded: %s", plugin.Name)
 	}
 
 	if plugin.Version != "1.2" {
-		t.Errorf("Invalid bare plugin's version loaded: %s", plugin.Version)
+		t.Errorf("invalid bare plugin's version loaded: %s", plugin.Version)
 	}
 }
 
@@ -94,15 +94,15 @@ func TestPluginInit(t *testing.T) {
 		pluginTest.InitFields()
 
 		if *pluginTest.Label != "Foo Bar" {
-			t.Errorf("Invalid plugin label initialized: %s", *pluginTest.Label)
+			t.Errorf("invalid plugin label initialized: %s", *pluginTest.Label)
 		}
 
 		if pluginTest.Tools.Commands[0] != filepath.Join("/foo/bar/commands") {
-			t.Errorf("Invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[0])
+			t.Errorf("invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[0])
 		}
 
 		if pluginTest.Tools.Commands[1] != filepath.Join("/foo/commands") {
-			t.Errorf("Invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[1])
+			t.Errorf("invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[1])
 		}
 	}
 }
