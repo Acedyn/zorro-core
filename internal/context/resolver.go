@@ -2,7 +2,6 @@ package context
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,6 +9,8 @@ import (
 
 	"github.com/Acedyn/zorro-core/internal/config"
 	"github.com/Acedyn/zorro-core/internal/utils"
+
+	"github.com/life4/genesis/slices"
 )
 
 // List of all possible version operators
@@ -37,7 +38,7 @@ func CompareVersions(versionA string, versionB string) VersionOperator {
 
 	splittedVersionA := strings.Split(versionA, VERSION_ITEM_SEPARATOR)
 	splittedVersionB := strings.Split(versionB, VERSION_ITEM_SEPARATOR)
-	minVersionLenght := int(math.Min(float64(len(splittedVersionA)), float64(len(splittedVersionB))))
+	minVersionLenght, _ := slices.Min([]int{len(splittedVersionA), len(splittedVersionB)})
 
 	// We compare the version items by items
 	for index := 0; index < minVersionLenght; index++ {
@@ -173,9 +174,9 @@ func GetQueryMatchingPlugins(queries []string, pluginConfig *config.PluginConfig
 
 // When multiple plugin versions are potential quantidates, we use the
 // lasted version of them.
-func GetPreferedPluginVersion(versions []*Plugin) (*Plugin, int) {
+func GetPreferedPluginVersion(versions []*Plugin) *Plugin {
 	if len(versions) == 0 {
-		return nil, 0
+		return nil
 	}
 
 	preferedIndex := 0
@@ -197,7 +198,7 @@ func GetPreferedPluginVersion(versions []*Plugin) (*Plugin, int) {
 		}
 	}
 
-	return versions[preferedIndex], preferedIndex
+	return versions[preferedIndex]
 }
 
 // Create a new quandidate set with only quandidates that are present in both sets.
@@ -251,21 +252,19 @@ func intersectQuandidates(quandidatesA, quandidatesB map[string][]*Plugin) map[s
 // Select a plugin version from quandidates and add its dependencies to the quandidates
 func resolvePluginVersion(
 	name string,
-	versionOffset int,
 	quandidates map[string][]*Plugin,
 	pluginConfig *config.PluginConfig,
-) (int, map[string][]*Plugin, error) {
+) (*Plugin, map[string][]*Plugin, error) {
 	versions, ok := quandidates[name]
-	if len(versions) <= versionOffset || !ok {
-		return 0, nil, fmt.Errorf("no quandidates available for plugin %s", name)
+	if len(versions) <= 0 || !ok {
+		return nil, nil, fmt.Errorf("no quandidates available for plugin %s", name)
 	}
 
 	// Reload the plugin to make sure it's not bare
-	preferedVersion, preferedVersionIndex := GetPreferedPluginVersion(versions[versionOffset:])
-	preferedVersionIndex += versionOffset
+	preferedVersion := GetPreferedPluginVersion(versions)
 	plugin, error := LoadPluginFromFile(preferedVersion.GetPath())
 	if error != nil {
-		return preferedVersionIndex, nil, fmt.Errorf("could not load plugin %s: %w", name, error)
+		return preferedVersion, nil, fmt.Errorf("could not load plugin %s: %w", name, error)
 	}
 
 	// We don't want to keep the quandidates that does not match
@@ -274,7 +273,7 @@ func resolvePluginVersion(
 	newQuandidates := intersectQuandidates(quandidates, requirementQuandidates)
 
 	newQuandidates[name] = []*Plugin{plugin}
-	return preferedVersionIndex, newQuandidates, nil
+	return preferedVersion, newQuandidates, nil
 }
 
 // Recusive function that will select a quandidates and resolve its dependencies.
@@ -301,15 +300,19 @@ func resolvePluginGraph(
 		return quandidates, nil
 	}
 
-	versionIndex := -1
-	newQuandidates := quandidates
-	var iterErr error = nil
-
 	completed[*pluginToResolve] = true
+	testedVersions := map[string]any{}
 
 	// Try to resolve a different plugin version until a valid graph is resolved
-	for len(quandidates[*pluginToResolve]) >= versionIndex {
-		versionIndex, newQuandidates, iterErr = resolvePluginVersion(*pluginToResolve, versionIndex+1, quandidates, pluginConfig)
+	for len(quandidates[*pluginToResolve]) > 0 {
+		selectedVersion, newQuandidates, iterErr := resolvePluginVersion(*pluginToResolve, quandidates, pluginConfig)
+
+		// Mark the selected version as tested and remove it from the quandidates
+		testedVersions[selectedVersion.GetVersion()] = nil
+		quandidates[*pluginToResolve] = slices.Filter(quandidates[*pluginToResolve], func(plugin *Plugin) bool {
+			_, ok := testedVersions[plugin.GetVersion()]
+			return !ok
+		})
 
 		if iterErr != nil {
 			utils.Logger().Debug(fmt.Sprintf("Skipping plugin versions: could not load plugin\n\t" + iterErr.Error()))
@@ -320,7 +323,7 @@ func resolvePluginGraph(
 		isValidGraph := true
 		for pluginName, quandidateVersions := range newQuandidates {
 			if len(quandidateVersions) == 0 {
-				utils.Logger().Debug(fmt.Sprintf("Skipping plugin version %d: invalid resolved graph (no valid quandidates for plugin %s)", versionIndex, pluginName))
+				utils.Logger().Debug(fmt.Sprintf("Skipping plugin version %s: invalid resolved graph (no valid quandidates for plugin %s)", selectedVersion.GetVersion(), pluginName))
 				isValidGraph = false
 				break
 			}
@@ -331,7 +334,7 @@ func resolvePluginGraph(
 
 		// Continue to resolve the graph
 		if newQuandidates, err := resolvePluginGraph(newQuandidates, completed, pluginConfig); err != nil {
-			utils.Logger().Debug(fmt.Sprintf("Skipping plugin versions %d: no graph combinason could be resolved", versionIndex))
+			utils.Logger().Debug(fmt.Sprintf("Skipping plugin versions %s: no graph combinason could be resolved", selectedVersion.GetVersion()))
 			continue
 		} else {
 			// The resolved graph is valid

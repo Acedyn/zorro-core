@@ -51,7 +51,7 @@ func TestGetAllPluginVersion(t *testing.T) {
 		})
 
 		if expectedPluginCount != len(plugins) {
-			t.Errorf("incorrect count of plugin found: %d (expected %d)", len(plugins), expectedPluginCount)
+			t.Errorf("incorrect count of plugin (found: %d, expected %d)", len(plugins), expectedPluginCount)
 		}
 	}
 }
@@ -75,18 +75,22 @@ func TestPluginResolution(t *testing.T) {
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 	fullPath := filepath.Join(cwdPath, "test", "mock")
 
-	for pluginQuery := range pluginResolutionTests {
+	for pluginQuery, expectedVersions := range pluginResolutionTests {
 		query := strings.Split(pluginQuery, " ")
-		_, err := ResolvePlugins(query, &config.PluginConfig{
+		resolvedPlugins, err := ResolvePlugins(query, &config.PluginConfig{
 			PluginPaths: []string{fullPath},
 		})
 
 		if err != nil {
-			t.Errorf("Could not resolve plugin graph: %s", err.Error())
+			t.Errorf("could not resolve plugin graph: %s", err.Error())
 			continue
 		}
 
-		t.Errorf("debug")
-		break
+		for _, resolvedPlugin := range resolvedPlugins {
+			expectedVersion, ok := expectedVersions[resolvedPlugin.GetName()]
+			if ok && !(expectedVersion == resolvedPlugin.GetVersion()) {
+				t.Errorf("incorrect plugin version resolved for %s (resolved %s, expected %s)", resolvedPlugin.GetName(), resolvedPlugin.GetVersion(), expectedVersion)
+			}
+		}
 	}
 }
