@@ -80,6 +80,9 @@ type VersionQuery struct {
 func (versionQuery *VersionQuery) Match(plugin *Plugin) bool {
 	versionComparison := CompareVersions(plugin.GetVersion(), versionQuery.Version)
 
+	if versionComparison == VersionOperator_EQUAL {
+		return true
+	}
 	if versionComparison == versionQuery.Operator {
 		return true
 	} else {
@@ -137,16 +140,30 @@ func FindPluginVersions(name string, pluginConfig *config.PluginConfig) []*Plugi
 // Get all available plugins that could be potential candidates to satisfy the query
 func GetQueryMatchingPlugins(queries []string, pluginConfig *config.PluginConfig) map[string][]*Plugin {
 	pluginVersion := map[string][]*Plugin{}
-
+	groupedQueries := map[string][]*VersionQuery{}
 	for _, query := range queries {
 		versionQuery := ParseVersionQuery(query)
-		if _, ok := pluginVersion[versionQuery.Name]; !ok {
-			pluginVersion[versionQuery.Name] = []*Plugin{}
+		if queryGroup, ok := groupedQueries[versionQuery.Name]; ok {
+			groupedQueries[versionQuery.Name] = append(queryGroup, versionQuery)
+		} else {
+			groupedQueries[versionQuery.Name] = []*VersionQuery{versionQuery}
+		}
+	}
+
+	for pluginName, versionQueries := range groupedQueries {
+		if _, ok := pluginVersion[pluginName]; !ok {
+			pluginVersion[pluginName] = []*Plugin{}
 		}
 
-		for _, plugin := range FindPluginVersions(versionQuery.Name, pluginConfig) {
-			if versionQuery.Match(plugin) {
-				pluginVersion[versionQuery.Name] = append(pluginVersion[versionQuery.Name], plugin)
+		for _, plugin := range FindPluginVersions(pluginName, pluginConfig) {
+			isMatch := true
+			for _, versionQuery := range versionQueries {
+				if !versionQuery.Match(plugin) {
+					isMatch = false
+				}
+			}
+			if isMatch {
+				pluginVersion[pluginName] = append(pluginVersion[pluginName], plugin)
 			}
 		}
 	}
@@ -202,9 +219,9 @@ func intersectQuandidates(quandidatesA, quandidatesB map[string][]*Plugin) map[s
 		// The two first cases are simple: only one of the two has
 		// plugins in the key so no intersections to do
 		if !okA {
-			intersectedCandidates[key] = quandidateSetA
-		} else if !okB {
 			intersectedCandidates[key] = quandidateSetB
+		} else if !okB {
+			intersectedCandidates[key] = quandidateSetA
 		} else {
 			// Both quandidates sets have plugins, we must only keep the ones
 			// That are present in both
@@ -239,12 +256,13 @@ func resolvePluginVersion(
 	pluginConfig *config.PluginConfig,
 ) (int, map[string][]*Plugin, error) {
 	versions, ok := quandidates[name]
-	if len(versions) == 0 || !ok {
+	if len(versions) <= versionOffset || !ok {
 		return 0, nil, fmt.Errorf("no quandidates available for plugin %s", name)
 	}
 
 	// Reload the plugin to make sure it's not bare
 	preferedVersion, preferedVersionIndex := GetPreferedPluginVersion(versions[versionOffset:])
+	preferedVersionIndex += versionOffset
 	plugin, error := LoadPluginFromFile(preferedVersion.GetPath())
 	if error != nil {
 		return preferedVersionIndex, nil, fmt.Errorf("could not load plugin %s: %w", name, error)
@@ -273,7 +291,7 @@ func resolvePluginGraph(
 	// Select the next plugin that needs to be resolved
 	var pluginToResolve *string = nil
 	for quandidateName := range quandidates {
-		if _, ok := completed[quandidateName]; ok {
+		if _, ok := completed[quandidateName]; !ok {
 			pluginToResolve = &quandidateName
 		}
 	}
@@ -290,8 +308,9 @@ func resolvePluginGraph(
 	completed[*pluginToResolve] = true
 
 	// Try to resolve a different plugin version until a valid graph is resolved
-	for len(quandidates[*pluginToResolve]) > versionIndex {
+	for len(quandidates[*pluginToResolve]) >= versionIndex {
 		versionIndex, newQuandidates, iterErr = resolvePluginVersion(*pluginToResolve, versionIndex+1, quandidates, pluginConfig)
+
 		if iterErr != nil {
 			utils.Logger().Debug(fmt.Sprintf("Skipping plugin versions: could not load plugin\n\t" + iterErr.Error()))
 			continue
