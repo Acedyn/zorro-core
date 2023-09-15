@@ -205,13 +205,13 @@ func GetPreferedPluginVersion(versions []*Plugin) *Plugin {
 func intersectQuandidates(quandidatesA, quandidatesB map[string][]*Plugin) map[string][]*Plugin {
 	intersectedCandidates := map[string][]*Plugin{}
 
-	// Get all the keys into a set (there is no set in go so maps are used insead)
-	pluginsKeys := make(map[string]any, len(quandidatesA))
+	// Get all the keys into a set
+	pluginsKeys := make(map[string]bool, len(quandidatesA))
 	for key := range quandidatesA {
-		pluginsKeys[key] = nil
+		pluginsKeys[key] = true
 	}
 	for key := range quandidatesB {
-		pluginsKeys[key] = nil
+		pluginsKeys[key] = true
 	}
 
 	for key := range pluginsKeys {
@@ -301,14 +301,14 @@ func resolvePluginGraph(
 	}
 
 	completed[*pluginToResolve] = true
-	testedVersions := map[string]any{}
+	testedVersions := map[string]bool{}
 
 	// Try to resolve a different plugin version until a valid graph is resolved
 	for len(quandidates[*pluginToResolve]) > 0 {
 		selectedVersion, newQuandidates, iterErr := resolvePluginVersion(*pluginToResolve, quandidates, pluginConfig)
 
 		// Mark the selected version as tested and remove it from the quandidates
-		testedVersions[selectedVersion.GetVersion()] = nil
+		testedVersions[selectedVersion.GetVersion()] = true
 		quandidates[*pluginToResolve] = slices.Filter(quandidates[*pluginToResolve], func(plugin *Plugin) bool {
 			_, ok := testedVersions[plugin.GetVersion()]
 			return !ok
