@@ -41,12 +41,17 @@ func (action *Action) Traverse(task func(TraversableTool) error) error {
 	// At first, all the children are pending
 	pending := maps.FromKeys(maps.Keys(action.GetChildren()), true)
 	completed := map[string]bool{}
-	tasksResults := make(chan error)
+	tasksResults := make(chan error, 1)
+	errors := []error{}
 	// Hack to make sure the for loop executes at least once
 	tasksResults <- nil
 
 	// Wait for the next completed task unil the channel is closed
-	for range tasksResults {
+	for taskResult := range tasksResults {
+		if taskResult != nil {
+			errors = append(errors, taskResult)
+		}
+
 		readyChildren := action.getReadyChildren(pending, completed)
 		for childKey, child := range readyChildren {
 			// All the ready children are executed in their own goroutine
@@ -62,6 +67,15 @@ func (action *Action) Traverse(task func(TraversableTool) error) error {
 		if len(completed) == len(slices.Filter(maps.Values(pending), func(el bool) bool { return el })) {
 			close(tasksResults)
 		}
+	}
+
+	// Gather all the potential errors that occured
+	if slices.Any(errors, func(el error) bool { return el != nil }) {
+		return fmt.Errorf(
+			"One or multiple children errored during the execution of the action %s: \n%s",
+			action.GetBase().GetName(),
+			slices.Join(slices.Filter(errors, func(el error) bool { return el != nil }), "\n"),
+		)
 	}
 
 	return nil
