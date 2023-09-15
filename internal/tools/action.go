@@ -7,17 +7,6 @@ import (
 	"github.com/life4/genesis/slices"
 )
 
-type TraversableTool interface {
-	Traverse(func(TraversableTool) error) error
-	GetBase() *ToolBase
-	GetTraversePath() string
-}
-
-// Build the path that lead to this action using the parents chain
-func (action *Action) GetTraversePath() string {
-	return ""
-}
-
 // Find and traverse children that have all their dependencies (upstream)
 // completed.
 func (action *Action) getReadyChildren(pending, completed map[string]bool) map[string]TraversableTool {
@@ -46,7 +35,7 @@ func (action *Action) getReadyChildren(pending, completed map[string]bool) map[s
 func (action *Action) Traverse(task func(TraversableTool) error) error {
 	// We first traverse this action before traversing its children
 	if err := task(action); err != nil {
-		return fmt.Errorf("Error occured while traversing action %s: %w", action.GetTraversePath(), err)
+		return fmt.Errorf("Error occured while traversing action %s: %w", action.GetBase().GetName(), err)
 	}
 
 	// At first, all the children are pending
