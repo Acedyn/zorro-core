@@ -15,7 +15,7 @@ message ActionChild {
     zorro.Action action = 2;
   }
   // Defines the dependency of this action child
-  optional string upstream = 3;
+  repeated string upstream = 3;
 }
 
 // An action holds groups of subactions and commands.

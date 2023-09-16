@@ -80,7 +80,6 @@ func TestPluginResolution(t *testing.T) {
 		resolvedPlugins, err := ResolvePlugins(query, &config.PluginConfig{
 			PluginPaths: []string{fullPath},
 		})
-
 		if err != nil {
 			t.Errorf("could not resolve plugin graph: %s", err.Error())
 			continue
