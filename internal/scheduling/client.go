@@ -14,15 +14,20 @@ import (
 	"github.com/Acedyn/zorro-core/internal/context"
 )
 
+type RunningClientHandle struct {
+  RunningClient *RunningClient
+  Process *os.Process
+}
+
 var (
-	runningClients []*RunningClient
+	runningClients map[int]*RunningClientHandle
 	once   sync.Once
 )
 
 // Getter for the clients singleton
-func RunningClients() []*RunningClient {
+func RunningClients() map[int]*RunningClientHandle {
 	once.Do(func() {
-		runningClients = []*RunningClient{}
+		runningClients = map[int]*RunningClientHandle{}
 	})
 
 	return runningClients
@@ -60,7 +65,7 @@ func RunClient(
   client *context.Client, 
   context *context.Context, 
   metadata map[string]string,
-) (*RunningClient, *os.Process, error) {
+) (*RunningClientHandle, error) {
   runningClient := &RunningClient{
     Client: client,
     Status: ClientStatus_STARTING,
@@ -70,7 +75,7 @@ func RunClient(
   // Build the command template
   template, err := template.New(client.GetName()).Parse(client.GetRunClientTemplate())
   if err != nil {
-    return nil, nil, fmt.Errorf("Could not run client %s: Invalid launch template %w", client.GetName(), err)
+    return nil, fmt.Errorf("could not run client %s: Invalid launch template %w", client.GetName(), err)
   }
   
   // Apply the metadata and the name on the template
@@ -83,7 +88,7 @@ func RunClient(
     Metadata: metadata,
   })
   if err != nil {
-    return nil, nil, fmt.Errorf("Could not run client %s: Templating error %w", client.GetName(), err)
+    return nil, fmt.Errorf("could not run client %s: Templating error %w", client.GetName(), err)
   }
 
   // Run the subprocess with the context's environment variables
@@ -91,16 +96,30 @@ func RunClient(
   clientCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
   clientCommand.Env = context.Environ(true)
 
-  return runningClient, clientCommand.Process, clientCommand.Start()
+  return &RunningClientHandle{
+    RunningClient: runningClient,
+    Process: clientCommand.Process,
+  }, clientCommand.Start()
 }
 
 // Get an already running client or start a new one from the query
-func RunningClientFromQuery(query *ClientQuery) *RunningClient {
+func RunningClientFromQuery(context *context.Context, query *ClientQuery) (*RunningClientHandle, error) {
   // First find a potential running client that matches the query
   for _, client := range RunningClients() {
-    if query.Match(client) {
-      return client
+    if query.Match(client.RunningClient) {
+      return client, nil
     }
   }
-  return nil
+
+  // If no running client matches the query, try to run a new one
+  for _, client := range context.AvailableClients() {
+    if client.GetName() == query.GetName() {
+      return RunClient(client, context, query.GetMetadata())
+    }
+  }
+
+  return nil, fmt.Errorf(
+    "could not find running client or run new client to satisfy the query %s",
+    query,
+  )
 }
