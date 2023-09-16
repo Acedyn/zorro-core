@@ -9,8 +9,8 @@ import (
 
 // Hold the returned value of a child task
 type ChildTaskResult struct {
-  Err error
-  Key string
+	Err error
+	Key string
 }
 
 // Find and traverse children that have all their dependencies (upstream)
@@ -25,7 +25,7 @@ func (action *Action) getReadyChildren(pending map[string]bool, completed []stri
 
 		// Process children that don't have dependencies or that have
 		// completed dependencies
-		if child.Upstream == nil || slices.All(child.Upstream, func(el string) bool {return slices.Contains(completed, el)}) {
+		if slices.All(child.Upstream, func(el string) bool { return slices.Contains(completed, el) }) {
 			switch child.GetChild().(type) {
 			case *ActionChild_Action:
 				readyChildren[childKey] = child.GetAction()
@@ -66,9 +66,9 @@ func (action *Action) Traverse(task func(TraversableTool) error) error {
 			pending[childKey] = false
 			go func(childKey string, child TraversableTool) {
 				tasksResults <- &ChildTaskResult{
-          Err: child.Traverse(task),
-          Key: childKey,
-        }
+					Err: child.Traverse(task),
+					Key: childKey,
+				}
 			}(childKey, child)
 		}
 
