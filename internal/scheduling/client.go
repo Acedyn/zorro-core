@@ -1,9 +1,17 @@
 package scheduling
 
 import (
+	"bytes"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 	"sync"
+	"text/template"
 
 	"github.com/life4/genesis/slices"
+
+	"github.com/Acedyn/zorro-core/internal/context"
 )
 
 var (
@@ -45,6 +53,45 @@ func (query *ClientQuery) Match(client *RunningClient) bool {
     }
   }
   return true
+}
+
+// Start the client into a running client 
+func RunClient(
+  client *context.Client, 
+  context *context.Context, 
+  metadata map[string]string,
+) (*RunningClient, *os.Process, error) {
+  runningClient := &RunningClient{
+    Client: client,
+    Status: ClientStatus_STARTING,
+    Metadata: metadata,
+  }
+
+  // Build the command template
+  template, err := template.New(client.GetName()).Parse(client.GetRunClientTemplate())
+  if err != nil {
+    return nil, nil, fmt.Errorf("Could not run client %s: Invalid launch template %w", client.GetName(), err)
+  }
+  
+  // Apply the metadata and the name on the template
+  runCommand := &bytes.Buffer{}
+  err = template.Execute(runCommand, struct {
+    Name string
+    Metadata map[string]string
+  }{
+    Name: client.GetName(),
+    Metadata: metadata,
+  })
+  if err != nil {
+    return nil, nil, fmt.Errorf("Could not run client %s: Templating error %w", client.GetName(), err)
+  }
+
+  // Run the subprocess with the context's environment variables
+  splittedCommand := strings.Split(runCommand.String(), " ")
+  clientCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
+  clientCommand.Env = context.Environ(true)
+
+  return runningClient, clientCommand.Process, clientCommand.Start()
 }
 
 // Get an already running client or start a new one from the query
