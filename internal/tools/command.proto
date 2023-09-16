@@ -5,14 +5,9 @@ option go_package = "github.com/Acedyn/zorro-core/internal/tools";
 
 import "internal/tools/tool.proto";
 
-message CommandImplementation {
-  // The path to the implementation file
-  string path = 1;
-}
-
 // A command is a task that will be sent to a client to be executed.
 message Command {
   // All tools are composed of this field that contains required infos
   zorro.ToolBase base = 1;
-  optional CommandImplementation implementation = 2;
+  zorro.ClientQuery client_query = 2;
 }
