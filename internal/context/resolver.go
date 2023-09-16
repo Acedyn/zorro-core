@@ -354,7 +354,7 @@ func ResolvePlugins(query []string, pluginConfig *config.PluginConfig) ([]*Plugi
 	initialQuandidates := GetQueryMatchingPlugins(query, pluginConfig)
 	resolvedGraph, err := resolvePluginGraph(initialQuandidates, nil, pluginConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Plugin graph resolution imposible for query %s: %w", query, err)
+		return nil, fmt.Errorf("plugin graph resolution imposible for query %s: %w", query, err)
 	}
 
 	resolvedPlugins := []*Plugin{}

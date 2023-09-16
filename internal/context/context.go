@@ -57,3 +57,14 @@ func (context *Context) Environ(includeCurrent bool) []string {
     return el + "=" + environ[el]
   })
 }
+
+func (context *Context) AvailableClients() []*Client {
+  availableClients := []*Client{}
+  for _, plugin := range context.GetPlugins() {
+    for _, client := range plugin.GetClients() {
+      availableClients = append(availableClients, client)
+    }
+  }
+
+  return availableClients
+}
