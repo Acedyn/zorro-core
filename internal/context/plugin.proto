@@ -3,7 +3,23 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/context";
 
-import "internal/scheduling/client.proto";
+// Clients are responsible for executing commands
+message Client {
+  // The name of the executable
+  string name = 1;
+  // Used to differentiate two same clients with a different version
+  string version = 2;
+  // User friently version of the name without all its contraints
+  optional string label = 3;
+  // Paths where we should look for the executable
+  repeated string paths = 4;
+  // Defines if this client can be used as a substitute for other clients
+  repeated string subsets = 5;
+  // Template to run the program without the client running
+  string run_program_template = 6;
+  // Template to run the program with the client running
+  string run_client_template = 7;
+}
 
 // Modifications for a environment variabme by a plugins
 message PluginEnv {
