@@ -3,6 +3,8 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/context";
 
+import "internal/scheduling/client.proto";
+
 // Modifications for a environment variabme by a plugins
 message PluginEnv {
   // Paths to append to the existing paths for path environment variable
@@ -19,25 +21,6 @@ message PluginTools {
   repeated string actions = 2;
   repeated string hooks = 3;
   repeated string widgets = 4;
-}
-
-// Defines which clients are available to launch. Clients are
-// responsible for executing commands
-message ClientDeclaration {
-  // The name of the executable
-  string name = 1;
-  // Used to differentiate two same clients with a different version
-  string version = 2;
-  // User friently version of the name without all its contraints
-  optional string label = 3;
-  // Paths where we should look for the executable
-  repeated string paths = 4;
-  // Defines if this client can be used as a substitute for other clients
-  repeated string subsets = 5;
-  // Template to launch the program without the client running
-  string launch_program_template = 6;
-  // Template to launch the program with the client running
-  string launch_client_template = 7;
 }
 
 // Plugins register a set of tools, environment variables and clients.
@@ -58,5 +41,5 @@ message Plugin {
   // Each plugins will alter the environment generated
   optional zorro.PluginTools tools = 7;
   // List of clients to register as available clients to launch
-  repeated zorro.ClientDeclaration clients = 8;
+  repeated zorro.Client clients = 8;
 }

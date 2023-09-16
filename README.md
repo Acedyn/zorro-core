@@ -68,6 +68,7 @@ modifications if a proto buffer make sure to regenerate the structs
 ```bash
 protoc --go_out=. --go_opt=paths=source_relative ./internal/tools/*.proto
 protoc --go_out=. --go_opt=paths=source_relative ./internal/context/*.proto
+protoc --go_out=. --go_opt=paths=source_relative ./internal/scheduling/*.proto
 ```
 
 Since the proto files are importing each other it is a good idea to regenerate everything when
