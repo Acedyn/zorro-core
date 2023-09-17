@@ -9,9 +9,10 @@ import "internal/context/plugin.proto";
 message ClientQuery {
   optional string name = 1;
   optional int32 pid = 2;
-  map<string, string> metadata = 3;
-  map<int32, string> stdout = 4;
-  map<int32, string> stderr = 5;
+  optional string version = 3;
+  map<string, string> metadata = 4;
+  map<int32, string> stdout = 5;
+  map<int32, string> stderr = 6;
 }
 
 enum ClientStatus {
