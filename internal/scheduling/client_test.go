@@ -61,7 +61,7 @@ var runningClientPool = []*RunningClient{
       Name: "foo",
       Version: "2.3",
     },
-    Pid: 60,
+    Pid: 69,
   },
 }
 

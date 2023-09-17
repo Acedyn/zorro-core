@@ -3,7 +3,8 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/tools";
 
-import "internal/tools/tool.proto";
+import "tools/tool.proto";
+import "scheduling/client.proto";
 
 // A command is a task that will be sent to a client to be executed.
 message Command {

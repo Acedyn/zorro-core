@@ -3,7 +3,7 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/context";
 
-import "internal/context/plugin.proto";
+import "context/plugin.proto";
 
 // Contexts represent the users's selection and all operations depends on it
 message Context {

@@ -3,7 +3,7 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
-import "internal/context/plugin.proto";
+import "context/plugin.proto";
 
 // Filters used to select a client from a client pool
 message ClientQuery {
