@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
+
+import "scheduling/client.proto";
+
+enum SchedulerType {
+  LOCAL_SCHEDULER = 0;
+  REMOTE_SCHEDULER = 1;
+  CUSTOM_SCHEDULER = 2;
+}
+
+// Schedulers are responsible for managing the client pool
+message Scheduler {
+  SchedulerType type = 1;
+}
