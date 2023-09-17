@@ -3,7 +3,7 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
-import "scheduling/client.proto";
+import "tools/command.proto";
 
 enum SchedulerType {
   LOCAL_SCHEDULER = 0;
@@ -14,4 +14,9 @@ enum SchedulerType {
 // Schedulers are responsible for managing the client pool
 message Scheduler {
   SchedulerType type = 1;
+}
+
+service Scheduling {
+  // Bidirectional command updates and queries with clients
+  rpc CommunicateCommands(stream Command) returns (stream Command);
 }

@@ -8,5 +8,5 @@
 //go:generate protoc --go_out=. --go_opt=paths=source_relative ./tools/command.proto
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative ./scheduling/client.proto
-//go:generate protoc --go_out=. --go_opt=paths=source_relative ./scheduling/scheduler.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative ./scheduling/scheduler.proto
 package internal

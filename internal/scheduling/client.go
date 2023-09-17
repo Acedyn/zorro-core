@@ -12,6 +12,7 @@ import (
 	"github.com/life4/genesis/slices"
 
 	"github.com/Acedyn/zorro-core/internal/context"
+	"github.com/Acedyn/zorro-core/internal/tools"
 )
 
 // Internal struct to keep track of the running clients
@@ -36,7 +37,7 @@ func RunningClients() map[int]*ClientHandle {
 }
 
 // Test if running client matches the query's requirements
-func (query *ClientQuery) Match(client *RunningClient) bool {
+func MatchClientQuery(query *tools.ClientQuery, client *RunningClient) bool {
 	// Test the name
 	if query.Name != nil {
 		// Some clients are supersets of other clients
@@ -122,11 +123,11 @@ func RunClient(
 }
 
 // Get an already running client or start a new one from the query
-func ClientFromQuery(context *context.Context, query *ClientQuery) (*ClientHandle, error) {
+func ClientFromQuery(context *context.Context, query *tools.ClientQuery) (*ClientHandle, error) {
 	// First find a potential running client that matches the query
   runningClientsLock.Lock()
 	for _, client := range RunningClients() {
-		if query.Match(client.RunningClient) {
+		if MatchClientQuery(query, client.RunningClient) {
       runningClientsLock.Unlock()
 			return client, nil
 		}
