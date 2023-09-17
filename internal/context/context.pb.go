@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.28.1
 // 	protoc        v4.24.3
-// source: internal/context/context.proto
+// source: context/context.proto
 
 package context
 
@@ -33,7 +33,7 @@ type Context struct {
 func (x *Context) Reset() {
 	*x = Context{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_internal_context_context_proto_msgTypes[0]
+		mi := &file_context_context_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -46,7 +46,7 @@ func (x *Context) String() string {
 func (*Context) ProtoMessage() {}
 
 func (x *Context) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_context_context_proto_msgTypes[0]
+	mi := &file_context_context_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +59,7 @@ func (x *Context) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Context.ProtoReflect.Descriptor instead.
 func (*Context) Descriptor() ([]byte, []int) {
-	return file_internal_context_context_proto_rawDescGZIP(), []int{0}
+	return file_context_context_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Context) GetPlugins() []*Plugin {
@@ -69,41 +69,40 @@ func (x *Context) GetPlugins() []*Plugin {
 	return nil
 }
 
-var File_internal_context_context_proto protoreflect.FileDescriptor
+var File_context_context_proto protoreflect.FileDescriptor
 
-var file_internal_context_context_proto_rawDesc = []byte{
-	0x0a, 0x1e, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x63, 0x6f, 0x6e, 0x74, 0x65,
-	0x78, 0x74, 0x2f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x12, 0x05, 0x7a, 0x6f, 0x72, 0x72, 0x6f, 0x1a, 0x1d, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
-	0x6c, 0x2f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e,
-	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x32, 0x0a, 0x07, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78,
-	0x74, 0x12, 0x27, 0x0a, 0x07, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x0d, 0x2e, 0x7a, 0x6f, 0x72, 0x72, 0x6f, 0x2e, 0x50, 0x6c, 0x75, 0x67, 0x69,
-	0x6e, 0x52, 0x07, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x42, 0x2f, 0x5a, 0x2d, 0x67, 0x69,
-	0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x41, 0x63, 0x65, 0x64, 0x79, 0x6e, 0x2f,
-	0x7a, 0x6f, 0x72, 0x72, 0x6f, 0x2d, 0x63, 0x6f, 0x72, 0x65, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72,
-	0x6e, 0x61, 0x6c, 0x2f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+var file_context_context_proto_rawDesc = []byte{
+	0x0a, 0x15, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78,
+	0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x7a, 0x6f, 0x72, 0x72, 0x6f, 0x1a, 0x14,
+	0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x22, 0x32, 0x0a, 0x07, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x12,
+	0x27, 0x0a, 0x07, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x0d, 0x2e, 0x7a, 0x6f, 0x72, 0x72, 0x6f, 0x2e, 0x50, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x52,
+	0x07, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x42, 0x2f, 0x5a, 0x2d, 0x67, 0x69, 0x74, 0x68,
+	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x41, 0x63, 0x65, 0x64, 0x79, 0x6e, 0x2f, 0x7a, 0x6f,
+	0x72, 0x72, 0x6f, 0x2d, 0x63, 0x6f, 0x72, 0x65, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
+	0x6c, 0x2f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
-	file_internal_context_context_proto_rawDescOnce sync.Once
-	file_internal_context_context_proto_rawDescData = file_internal_context_context_proto_rawDesc
+	file_context_context_proto_rawDescOnce sync.Once
+	file_context_context_proto_rawDescData = file_context_context_proto_rawDesc
 )
 
-func file_internal_context_context_proto_rawDescGZIP() []byte {
-	file_internal_context_context_proto_rawDescOnce.Do(func() {
-		file_internal_context_context_proto_rawDescData = protoimpl.X.CompressGZIP(file_internal_context_context_proto_rawDescData)
+func file_context_context_proto_rawDescGZIP() []byte {
+	file_context_context_proto_rawDescOnce.Do(func() {
+		file_context_context_proto_rawDescData = protoimpl.X.CompressGZIP(file_context_context_proto_rawDescData)
 	})
-	return file_internal_context_context_proto_rawDescData
+	return file_context_context_proto_rawDescData
 }
 
-var file_internal_context_context_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_internal_context_context_proto_goTypes = []interface{}{
+var file_context_context_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_context_context_proto_goTypes = []interface{}{
 	(*Context)(nil), // 0: zorro.Context
 	(*Plugin)(nil),  // 1: zorro.Plugin
 }
-var file_internal_context_context_proto_depIdxs = []int32{
+var file_context_context_proto_depIdxs = []int32{
 	1, // 0: zorro.Context.plugins:type_name -> zorro.Plugin
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
@@ -112,14 +111,14 @@ var file_internal_context_context_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_internal_context_context_proto_init() }
-func file_internal_context_context_proto_init() {
-	if File_internal_context_context_proto != nil {
+func init() { file_context_context_proto_init() }
+func file_context_context_proto_init() {
+	if File_context_context_proto != nil {
 		return
 	}
-	file_internal_context_plugin_proto_init()
+	file_context_plugin_proto_init()
 	if !protoimpl.UnsafeEnabled {
-		file_internal_context_context_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_context_context_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Context); i {
 			case 0:
 				return &v.state
@@ -136,18 +135,18 @@ func file_internal_context_context_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_internal_context_context_proto_rawDesc,
+			RawDescriptor: file_context_context_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_internal_context_context_proto_goTypes,
-		DependencyIndexes: file_internal_context_context_proto_depIdxs,
-		MessageInfos:      file_internal_context_context_proto_msgTypes,
+		GoTypes:           file_context_context_proto_goTypes,
+		DependencyIndexes: file_context_context_proto_depIdxs,
+		MessageInfos:      file_context_context_proto_msgTypes,
 	}.Build()
-	File_internal_context_context_proto = out.File
-	file_internal_context_context_proto_rawDesc = nil
-	file_internal_context_context_proto_goTypes = nil
-	file_internal_context_context_proto_depIdxs = nil
+	File_context_context_proto = out.File
+	file_context_context_proto_rawDesc = nil
+	file_context_context_proto_goTypes = nil
+	file_context_context_proto_depIdxs = nil
 }
