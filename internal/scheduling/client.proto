@@ -5,16 +5,6 @@ option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
 import "context/plugin.proto";
 
-// Filters used to select a client from a client pool
-message ClientQuery {
-  optional string name = 1;
-  optional int32 pid = 2;
-  optional string version = 3;
-  map<string, string> metadata = 4;
-  map<int32, string> stdout = 5;
-  map<int32, string> stderr = 6;
-}
-
 enum ClientStatus {
   STARTING = 0; // The program is starting
   IDLE = 1; // The program is running but not executing any commands

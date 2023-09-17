@@ -4,7 +4,16 @@ package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/tools";
 
 import "tools/tool.proto";
-import "scheduling/client.proto";
+
+// Filters used to select a client from a client pool
+message ClientQuery {
+  optional string name = 1;
+  optional int32 pid = 2;
+  optional string version = 3;
+  map<string, string> metadata = 4;
+  map<int32, string> stdout = 5;
+  map<int32, string> stderr = 6;
+}
 
 // A command is a task that will be sent to a client to be executed.
 message Command {

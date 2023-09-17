@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Acedyn/zorro-core/internal/context"
+	"github.com/Acedyn/zorro-core/internal/tools"
 )
 
 // Test running a new client's process
@@ -46,7 +47,7 @@ func TestRunClient(t *testing.T) {
 }
 
 // Test client query over client pool
-var clientQueryTests = []*ClientQuery{
+var clientQueryTests = []*tools.ClientQuery{
   {
     Name: &[]string{"bash"}[0],
   },
