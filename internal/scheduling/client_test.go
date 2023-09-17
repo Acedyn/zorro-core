@@ -6,6 +6,7 @@ import (
 	"github.com/Acedyn/zorro-core/internal/context"
 )
 
+// Test running a new client's process
 var runClientTestWindows = context.Client{
   Name: "cmd",
   RunClientTemplate: "{{.Name}}",
@@ -44,6 +45,7 @@ func TestRunClient(t *testing.T) {
   }
 }
 
+// Test client query over client pool
 var clientQueryTests = []*ClientQuery{
   {
     Name: &[]string{"bash"}[0],
