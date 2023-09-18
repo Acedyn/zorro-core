@@ -9,40 +9,45 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
 
-	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/tools"
 )
 
+type Context interface {
+  AvailableClients() []*Client
+  Environ(bool) []string
+}
+
 // Internal struct to keep track of the running clients
 type ClientHandle struct {
-	RunningClient *RunningClient
+	Client *Client
 	Process       *os.Process
 }
 
 var (
   runningClientsLock = &sync.Mutex{}
-	runningClients map[int]*ClientHandle
+	clientPool map[int]*ClientHandle
 	once           sync.Once
 )
 
 // Getter for the clients singleton
-func RunningClients() map[int]*ClientHandle {
+func ClientPool() map[int]*ClientHandle {
 	once.Do(func() {
-		runningClients = map[int]*ClientHandle{}
+		clientPool = map[int]*ClientHandle{}
 	})
 
-	return runningClients
+	return clientPool
 }
 
 // Test if running client matches the query's requirements
-func MatchClientQuery(query *tools.ClientQuery, client *RunningClient) bool {
+func MatchClientQuery(query *tools.ClientQuery, client *Client) bool {
 	// Test the name
 	if query.Name != nil {
 		// Some clients are supersets of other clients
 		// If so they should match also their subsets
-		subsets := append(client.GetClient().GetSubsets(), client.GetClient().GetName())
+		subsets := append(client.GetSubsets(), client.GetName())
 		if !slices.Contains(subsets, query.GetName()) {
 			return false
 		}
@@ -64,21 +69,24 @@ func MatchClientQuery(query *tools.ClientQuery, client *RunningClient) bool {
 }
 
 // Start the client into a running client
-func RunClient(
-	client *context.Client,
-	context *context.Context,
+func (client *Client) Start(
+	context Context,
 	metadata map[string]string,
 ) (*ClientHandle, error) {
-	runningClient := &RunningClient{
-		Client:   client,
-		Status:   ClientStatus_STARTING,
-		Metadata: metadata,
+  clientHandle := &ClientHandle{
+		Client: &(*client),
 	}
+  clientHandle.Client.Status = ClientStatus_STARTING
+  clientHandle.Client.Metadata = maps.Merge(clientHandle.Client.GetMetadata(), metadata)
 
 	// Build the command template
-	template, err := template.New(client.GetName()).Parse(client.GetRunClientTemplate())
+	template, err := template.New(client.GetName()).Parse(clientHandle.Client.GetStartClientTemplate())
 	if err != nil {
-		return nil, fmt.Errorf("could not run client %s: Invalid launch template %w", client.GetName(), err)
+		return nil, fmt.Errorf(
+      "could not run client %s: Invalid launch template %w", 
+      clientHandle.Client.GetName(), 
+      err,
+    )
 	}
 
 	// Apply the metadata and the name on the template
@@ -89,13 +97,13 @@ func RunClient(
 		Version  string
 		Metadata map[string]string
 	}{
-		Name:     client.GetName(),
-		Label:    client.GetLabel(),
-		Version:  client.GetVersion(),
-		Metadata: metadata,
+		Name:     clientHandle.Client.GetName(),
+		Label:    clientHandle.Client.GetLabel(),
+		Version:  clientHandle.Client.GetVersion(),
+		Metadata: clientHandle.Client.GetMetadata(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not run client %s: Templating error %w", client.GetName(), err)
+		return nil, fmt.Errorf("could not run client %s: Templating error %w", clientHandle.Client.GetName(), err)
 	}
 
 	// Build the subprocess's env with the context's environment variables
@@ -103,42 +111,39 @@ func RunClient(
 	clientCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
 	clientCommand.Env = context.Environ(true)
 
-  // Run the subprocess
+  // Start the subprocess
   err = clientCommand.Start()
   if err != nil {
     return nil, fmt.Errorf("an error occured while starting process for client %s: %w", client, err)
   }
 
   // Register the new client into the client pool
-  runningClient.Pid = int32(clientCommand.Process.Pid)
-  clientHandle := &ClientHandle{
-		RunningClient: runningClient,
-		Process:       clientCommand.Process,
-	}
+  clientHandle.Client.Pid = int32(clientCommand.Process.Pid)
+  clientHandle.Process = clientCommand.Process
   runningClientsLock.Lock()
   defer runningClientsLock.Unlock()
-  RunningClients()[clientCommand.Process.Pid] = clientHandle
+  ClientPool()[clientCommand.Process.Pid] = clientHandle
 
 	return clientHandle, nil
 }
 
 // Get an already running client or start a new one from the query
-func ClientFromQuery(context *context.Context, query *tools.ClientQuery) (*ClientHandle, error) {
+func ClientFromQuery(context Context, query *tools.ClientQuery) (*ClientHandle, error) {
 	// First find a potential running client that matches the query
   runningClientsLock.Lock()
-	for _, client := range RunningClients() {
-		if MatchClientQuery(query, client.RunningClient) {
+	for _, clientHandle := range ClientPool() {
+		if MatchClientQuery(query, clientHandle.Client) {
       runningClientsLock.Unlock()
-			return client, nil
+			return clientHandle, nil
 		}
 	}
-  // We must unlock the mutex here because RunClient will need it
+  // We must unlock the mutex here because client.Start will need it
   runningClientsLock.Unlock()
 
 	// If no running client matches the query, try to run a new one
 	for _, client := range context.AvailableClients() {
 		if client.GetName() == query.GetName() {
-			return RunClient(client, context, query.GetMetadata())
+			return client.Start(context, query.GetMetadata())
 		}
 	}
 

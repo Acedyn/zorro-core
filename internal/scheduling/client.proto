@@ -3,8 +3,6 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
-import "context/plugin.proto";
-
 enum ClientStatus {
   STARTING = 0; // The program is starting
   IDLE = 1; // The program is running but not executing any commands
@@ -14,14 +12,26 @@ enum ClientStatus {
   NOT_RESPONDING = 5; // No ping received from the client for a certain amound of time
 }
 
-// Handle of an instance to a client
-message RunningClient {
-  // The client definition at the origin of this running client
-  Client client = 1;
+// Clients are responsible for executing commands
+message Client {
+  // The name of the executable
+  string name = 1;
+  // Used to differentiate two same clients with a different version
+  string version = 2;
+  // User friently version of the name without all its contraints
+  optional string label = 3;
+  // Paths where we should look for the executable
+  repeated string paths = 4;
+  // Defines if this client can be used as a substitute for other clients
+  repeated string subsets = 5;
+  // Template to run the program without the client running
+  string start_program_template = 6;
+  // Template to run the program with the client running
+  string start_client_template = 7;
   // Help knowing at which state is the client
-  ClientStatus status = 2;
+  ClientStatus status = 8;
   // PID of the underlying running process
-  int32 pid = 3;
+  int32 pid = 9;
   // Extra data used mainly for filters
-  map<string, string> metadata = 4;
+  map<string, string> metadata = 10;
 }
