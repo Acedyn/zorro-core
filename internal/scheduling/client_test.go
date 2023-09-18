@@ -29,7 +29,7 @@ var runClientTestLinux = Client{
 
 func TestStartClient(t *testing.T) {
   runClientTest := &runClientTestLinux
-  clientHandle, err := StartClient(runClientTest, &MockedContext{}, map[string]string{
+  clientHandle, err := runClientTest.Start(&MockedContext{}, map[string]string{
     
   })
   if err != nil {
