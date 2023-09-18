@@ -29,7 +29,7 @@ message Client {
   // Template to run the program with the client running
   string start_client_template = 7;
   // Help knowing at which state is the client
-  ClientStatus status = 8;
+  optional ClientStatus status = 8;
   // PID of the underlying running process
   int32 pid = 9;
   // Extra data used mainly for filters

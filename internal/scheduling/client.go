@@ -16,23 +16,24 @@ import (
 )
 
 type Context interface {
-  AvailableClients() []*Client
-  Environ(bool) []string
+	AvailableClients() []*Client
+	Environ(bool) []string
 }
 
 // Internal struct to keep track of the running clients
 type ClientHandle struct {
-	Client *Client
-	Process       *os.Process
+	Client       *Client
+	Process      *os.Process
+	CommandQueue chan *tools.Command
 }
 
 var (
-  runningClientsLock = &sync.Mutex{}
-	clientPool map[int]*ClientHandle
+	clientPoolLock = &sync.Mutex{}
+	clientPool     map[int]*ClientHandle
 	once           sync.Once
 )
 
-// Getter for the clients singleton
+// Getter for the clients pool singleton
 func ClientPool() map[int]*ClientHandle {
 	once.Do(func() {
 		clientPool = map[int]*ClientHandle{}
@@ -73,20 +74,21 @@ func (client *Client) Start(
 	context Context,
 	metadata map[string]string,
 ) (*ClientHandle, error) {
-  clientHandle := &ClientHandle{
+	clientHandle := &ClientHandle{
 		Client: &(*client),
 	}
-  clientHandle.Client.Status = ClientStatus_STARTING
-  clientHandle.Client.Metadata = maps.Merge(clientHandle.Client.GetMetadata(), metadata)
+  startingStatus := ClientStatus_STARTING
+	clientHandle.Client.Status = &startingStatus
+	clientHandle.Client.Metadata = maps.Merge(clientHandle.Client.GetMetadata(), metadata)
 
 	// Build the command template
 	template, err := template.New(client.GetName()).Parse(clientHandle.Client.GetStartClientTemplate())
 	if err != nil {
 		return nil, fmt.Errorf(
-      "could not run client %s: Invalid launch template %w", 
-      clientHandle.Client.GetName(), 
-      err,
-    )
+			"could not run client %s: Invalid launch template %w",
+			clientHandle.Client.GetName(),
+			err,
+		)
 	}
 
 	// Apply the metadata and the name on the template
@@ -111,18 +113,18 @@ func (client *Client) Start(
 	clientCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
 	clientCommand.Env = context.Environ(true)
 
-  // Start the subprocess
-  err = clientCommand.Start()
-  if err != nil {
-    return nil, fmt.Errorf("an error occured while starting process for client %s: %w", client, err)
-  }
+	// Start the subprocess
+	err = clientCommand.Start()
+	if err != nil {
+		return nil, fmt.Errorf("an error occured while starting process for client %s: %w", client, err)
+	}
 
-  // Register the new client into the client pool
-  clientHandle.Client.Pid = int32(clientCommand.Process.Pid)
-  clientHandle.Process = clientCommand.Process
-  runningClientsLock.Lock()
-  defer runningClientsLock.Unlock()
-  ClientPool()[clientCommand.Process.Pid] = clientHandle
+	// Register the new client into the client pool
+	clientHandle.Client.Pid = int32(clientCommand.Process.Pid)
+	clientHandle.Process = clientCommand.Process
+	clientPoolLock.Lock()
+	defer clientPoolLock.Unlock()
+	ClientPool()[clientCommand.Process.Pid] = clientHandle
 
 	return clientHandle, nil
 }
@@ -130,15 +132,15 @@ func (client *Client) Start(
 // Get an already running client or start a new one from the query
 func ClientFromQuery(context Context, query *tools.ClientQuery) (*ClientHandle, error) {
 	// First find a potential running client that matches the query
-  runningClientsLock.Lock()
+	clientPoolLock.Lock()
 	for _, clientHandle := range ClientPool() {
 		if MatchClientQuery(query, clientHandle.Client) {
-      runningClientsLock.Unlock()
+			clientPoolLock.Unlock()
 			return clientHandle, nil
 		}
 	}
-  // We must unlock the mutex here because client.Start will need it
-  runningClientsLock.Unlock()
+	// We must unlock the mutex here because client.Start will need it
+	clientPoolLock.Unlock()
 
 	// If no running client matches the query, try to run a new one
 	for _, client := range context.AvailableClients() {

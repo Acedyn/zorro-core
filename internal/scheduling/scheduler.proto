@@ -4,6 +4,7 @@ package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
 import "internal/tools/command.proto";
+import "internal/scheduling/client.proto";
 
 enum SchedulerType {
   LOCAL_SCHEDULER = 0;
@@ -17,6 +18,8 @@ message Scheduler {
 }
 
 service Scheduling {
+  // Make this client available
+  rpc RegisterClient(Client) returns (Client);
   // Bidirectional command updates and queries with clients
   rpc CommunicateCommands(stream Command) returns (stream Command);
 }
