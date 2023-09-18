@@ -60,16 +60,21 @@ gofumpt -l -w .
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 ```
 
-#### Generate structs from protofiles
+#### Generate structs from proto files
 
 This project is using [protobufs](https://protobuf.dev/) for a lots of struct definitions. After every
 modifications if a proto buffer make sure to regenerate the structs
+
+To generate all the proto files at once
+
+```bash
+go generate .
+```
+
+You can also generate the proto files independently
 
 ```bash
 protoc --go_out=. --go_opt=paths=source_relative ./internal/tools/*.proto
 protoc --go_out=. --go_opt=paths=source_relative ./internal/context/*.proto
 protoc --go_out=. --go_opt=paths=source_relative ./internal/scheduling/*.proto
 ```
-
-Since the proto files are importing each other it is a good idea to regenerate everything when
-modifying a protofile

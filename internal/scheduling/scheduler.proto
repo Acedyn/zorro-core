@@ -3,7 +3,7 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
-import "tools/command.proto";
+import "internal/tools/command.proto";
 
 enum SchedulerType {
   LOCAL_SCHEDULER = 0;

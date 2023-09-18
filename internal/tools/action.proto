@@ -3,8 +3,8 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/tools";
 
-import "tools/tool.proto";
-import "tools/command.proto";
+import "internal/tools/tool.proto";
+import "internal/tools/command.proto";
 
 // An action can be composed of different types of tools
 // They are linked together via the upstream key

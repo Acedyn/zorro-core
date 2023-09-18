@@ -1,7 +1,7 @@
 package scheduling
 
 import (
-	"github.com/Acedyn/zorro-core/internal/network"
+  "github.com/Acedyn/zorro-core/internal/network"
 )
 
 type schedulingServer struct {

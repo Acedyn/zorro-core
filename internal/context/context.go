@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Acedyn/zorro-core/internal/scheduling"
+
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
 )
@@ -58,8 +60,8 @@ func (context *Context) Environ(includeCurrent bool) []string {
   })
 }
 
-func (context *Context) AvailableClients() []*Client {
-  availableClients := []*Client{}
+func (context *Context) AvailableClients() []*scheduling.Client {
+  availableClients := []*scheduling.Client{}
   for _, plugin := range context.GetPlugins() {
     for _, client := range plugin.GetClients() {
       availableClients = append(availableClients, client)

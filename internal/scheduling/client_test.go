@@ -3,37 +3,33 @@ package scheduling
 import (
 	"testing"
 
-	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/tools"
 )
 
+type MockedContext struct {}
+
+func (context *MockedContext) AvailableClients() []*Client {
+  return []*Client{&runClientTestLinux, &runClientTestWindows}
+}
+
+func (context *MockedContext) Environ(b bool) []string {
+  return []string{}
+}
+
 // Test running a new client's process
-var runClientTestWindows = context.Client{
+var runClientTestWindows = Client{
   Name: "cmd",
-  RunClientTemplate: "{{.Name}}",
+  StartClientTemplate: "{{.Name}}",
 }
 
-var runClientTestLinux = context.Client{
+var runClientTestLinux = Client{
   Name: "bash",
-  RunClientTemplate: "{{.Name}}",
+  StartClientTemplate: "{{.Name}}",
 }
 
-var clientTestContext = context.Context{
-  Plugins: []*context.Plugin{
-    {
-      Name: "bash",
-      Clients: []*context.Client{&runClientTestLinux},
-    },
-    {
-      Name: "cmd",
-      Clients: []*context.Client{&runClientTestWindows},
-    },
-  },
-}
-
-func TestRunClient(t *testing.T) {
+func TestStartClient(t *testing.T) {
   runClientTest := &runClientTestLinux
-  clientHandle, err := RunClient(runClientTest, &clientTestContext, map[string]string{
+  clientHandle, err := StartClient(runClientTest, &MockedContext{}, map[string]string{
     
   })
   if err != nil {
@@ -58,25 +54,23 @@ var clientQueryTests = []*tools.ClientQuery{
   },
 }
 
-var runningClientPool = []*RunningClient{
+var runningClientPool = []*ClientHandle{
   {
-    Client: &context.Client{
+    Client: &Client{
       Name: "foo",
       Version: "2.3",
+      Pid: 69,
     },
-    Pid: 69,
   },
 }
 
 func TestClientFromQuery(t *testing.T) {
   for _, runningClient := range runningClientPool {
-    RunningClients()[int(runningClient.Pid)] = &ClientHandle{
-      RunningClient: runningClient,
-    }
+    ClientPool()[int(runningClient.Client.Pid)] = runningClient
   }
 
   for _, clientQueryTest := range clientQueryTests {
-    _, err := ClientFromQuery(&clientTestContext, clientQueryTest)
+    _, err := ClientFromQuery(&MockedContext{}, clientQueryTest)
     if err != nil {
       t.Errorf("An error occured while getting client from query %s: %s", clientQueryTest, err.Error())
       return
