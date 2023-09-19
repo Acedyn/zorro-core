@@ -33,8 +33,8 @@ var runClientTestLinux = Client{
 func mockedScheduler() {
 	for {
 		queuedClients := maps.Values(ClientQueue())
-		if len(queuedClients) > 0 {
-			queuedClients[0].Registration <- nil
+    for _, queuedClient := range queuedClients {
+			queuedClient.Registration <- nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}

@@ -31,11 +31,11 @@ var clientQueryTests = []*client.ClientQuery{
 	{
 		Name: &[]string{"bash"}[0],
 	},
-	// {
-	// 	Name:    &[]string{"foo"}[0],
-	// 	Version: &[]string{"2.3"}[0],
-	// 	Pid:     &[]int32{69}[0],
-	// },
+	{
+		Name:    &[]string{"foo"}[0],
+		Version: &[]string{"2.3"}[0],
+		Pid:     &[]int32{69}[0],
+	},
 }
 
 var runningClientPool = map[string]*RegisteredClient{
@@ -52,9 +52,9 @@ var runningClientPool = map[string]*RegisteredClient{
 func mockedScheduler() {
 	for {
 		queuedClients := maps.Values(client.ClientQueue())
-		if len(queuedClients) > 0 {
-			registerClient(queuedClients[0].Client)
-		}
+    for _, queuedClient := range queuedClients {
+			registerClient(queuedClient.Client)
+    }
 		time.Sleep(100 * time.Millisecond)
 	}
 }

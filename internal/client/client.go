@@ -138,8 +138,8 @@ func (client *Client) Start(
 
 	// Register the new client into the client queue and wait for it to be registered
 	clientQueueLock.Lock()
-	defer clientQueueLock.Unlock()
 	ClientQueue()[clientHandle.Client.GetId()] = clientHandle
+	clientQueueLock.Unlock()
 
 	return clientHandle, <-registration
 }
