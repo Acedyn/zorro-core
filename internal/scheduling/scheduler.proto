@@ -13,13 +13,16 @@ enum SchedulerType {
 }
 
 // Schedulers are responsible for managing the client pool
-message Scheduler {
-  SchedulerType type = 1;
+message Scheduler { SchedulerType type = 1; }
+
+// Multiple values can be exchanged with the client
+message ClientCommunication {
+  optional Command command_update = 1;
+  optional Client client_update = 2;
 }
 
 service Scheduling {
-  // Make this client available
-  rpc RegisterClient(Client) returns (Client);
-  // Bidirectional command updates and queries with clients
-  rpc CommunicateCommands(stream Command) returns (stream Command);
+  // Bidirectional updates with clients
+  rpc CommunicateCommands(stream ClientCommunication)
+      returns (stream ClientCommunication);
 }
