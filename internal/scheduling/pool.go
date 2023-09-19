@@ -18,19 +18,26 @@ type RegisteredClient struct {
 }
 
 // Register the given client to the client pool
-func registerClient(client *client.Client) *RegisteredClient {
-	// First check if the client is already registered
+func registerClient(clientToRegister *client.Client) *RegisteredClient {
+	// Check if the client is already registered
 	clientPoolLock.Lock()
 	defer clientPoolLock.Unlock()
-	registeredClient, ok := ClientPool()[client.GetId()]
+	registeredClient, ok := ClientPool()[clientToRegister.GetId()]
 	if !ok {
 		registeredClient = &RegisteredClient{
-			Client:                client,
+			Client:                clientToRegister,
 			CommandQueue:          make(chan *tools.Command),
 			ScheduledCommands:     map[string]*tools.Command{},
 			ScheduledCommandsLock: &sync.Mutex{},
 		}
-		ClientPool()[client.GetId()] = registeredClient
+		ClientPool()[clientToRegister.GetId()] = registeredClient
+	}
+
+	// Check if the client was queued, we must inform the submitter that the registering has happened
+	client.ClientQueueLock.Lock()
+	defer client.ClientQueueLock.Unlock()
+	if clientHandle, ok := client.ClientQueue()[clientToRegister.GetId()]; ok {
+		clientHandle.Registration <- nil
 	}
 
 	return registeredClient
