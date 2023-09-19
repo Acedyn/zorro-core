@@ -4,7 +4,7 @@ package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
 
 import "internal/tools/command.proto";
-import "internal/scheduling/client.proto";
+import "internal/client/client.proto";
 
 enum SchedulerType {
   LOCAL_SCHEDULER = 0;

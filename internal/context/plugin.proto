@@ -3,7 +3,7 @@ syntax = "proto3";
 package zorro;
 option go_package = "github.com/Acedyn/zorro-core/internal/context";
 
-import "internal/scheduling/client.proto";
+import "internal/client/client.proto";
 
 // Modifications for a environment variabme by a plugins
 message PluginEnv {

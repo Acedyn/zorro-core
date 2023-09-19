@@ -1,4 +1,4 @@
-package scheduling
+package client
 
 import (
 	"bytes"
@@ -11,39 +11,37 @@ import (
 
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
-
-	"github.com/Acedyn/zorro-core/internal/tools"
 )
 
-type Context interface {
+type StartClientContext interface {
 	AvailableClients() []*Client
 	Environ(bool) []string
 }
 
-// Internal struct to keep track of the running clients
 type ClientHandle struct {
-	Client       *Client
-	Process      *os.Process
-	CommandQueue chan *tools.Command
+	Client *Client
+  Process *os.Process
+	Result chan error
 }
 
 var (
-	clientPoolLock = &sync.Mutex{}
-	clientPool     map[int]*ClientHandle
+	clientQueueLock = &sync.Mutex{}
+	clientQueue map[string]*ClientHandle
 	once           sync.Once
 )
 
-// Getter for the clients pool singleton
-func ClientPool() map[int]*ClientHandle {
+// Getter for the clients queue singleton which holds the queue 
+// of client waiting to be registered
+func ClientQueue() map[string]*ClientHandle {
 	once.Do(func() {
-		clientPool = map[int]*ClientHandle{}
+		clientQueue = map[string]*ClientHandle{}
 	})
 
-	return clientPool
+	return clientQueue
 }
 
-// Test if running client matches the query's requirements
-func MatchClientQuery(query *tools.ClientQuery, client *Client) bool {
+// Test if a client matches the query's requirements
+func (query *ClientQuery) MatchClient(client *Client) bool {
 	// Test the name
 	if query.Name != nil {
 		// Some clients are supersets of other clients
@@ -71,11 +69,13 @@ func MatchClientQuery(query *tools.ClientQuery, client *Client) bool {
 
 // Start the client into a running client
 func (client *Client) Start(
-	context Context,
+	context StartClientContext,
 	metadata map[string]string,
 ) (*ClientHandle, error) {
+  result := make(chan error)
 	clientHandle := &ClientHandle{
 		Client: &(*client),
+    Result: result,
 	}
   startingStatus := ClientStatus_STARTING
 	clientHandle.Client.Status = &startingStatus
@@ -119,38 +119,14 @@ func (client *Client) Start(
 		return nil, fmt.Errorf("an error occured while starting process for client %s: %w", client, err)
 	}
 
-	// Register the new client into the client pool
+	// Register the new client into the client queue and wait for it to be registered
 	clientHandle.Client.Pid = int32(clientCommand.Process.Pid)
 	clientHandle.Process = clientCommand.Process
-	clientPoolLock.Lock()
-	defer clientPoolLock.Unlock()
-	ClientPool()[clientCommand.Process.Pid] = clientHandle
+	clientQueueLock.Lock()
+	defer clientQueueLock.Unlock()
+	ClientQueue()[clientHandle.Client.GetId()] = clientHandle
 
+  // Wait for the client to be registered on the scheduler
+  <-result
 	return clientHandle, nil
-}
-
-// Get an already running client or start a new one from the query
-func ClientFromQuery(context Context, query *tools.ClientQuery) (*ClientHandle, error) {
-	// First find a potential running client that matches the query
-	clientPoolLock.Lock()
-	for _, clientHandle := range ClientPool() {
-		if MatchClientQuery(query, clientHandle.Client) {
-			clientPoolLock.Unlock()
-			return clientHandle, nil
-		}
-	}
-	// We must unlock the mutex here because client.Start will need it
-	clientPoolLock.Unlock()
-
-	// If no running client matches the query, try to run a new one
-	for _, client := range context.AvailableClients() {
-		if client.GetName() == query.GetName() {
-			return client.Start(context, query.GetMetadata())
-		}
-	}
-
-	return nil, fmt.Errorf(
-		"could not find running client or run new client to satisfy the query %s",
-		query,
-	)
 }
