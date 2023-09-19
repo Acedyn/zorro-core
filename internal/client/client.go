@@ -25,10 +25,23 @@ type ClientHandle struct {
 }
 
 var (
-	ClientQueueLock = &sync.Mutex{}
+	clientQueueLock = &sync.Mutex{}
 	clientQueue     map[string]*ClientHandle
 	once            sync.Once
 )
+
+// Check if the client was queued, we must inform the submitter that the registering has happened
+func UnQueueClient(client *Client) *ClientHandle {
+	clientQueueLock.Lock()
+	defer clientQueueLock.Unlock()
+
+	if clientHandle, ok := ClientQueue()[client.GetId()]; ok {
+		delete(ClientQueue(), client.GetId())
+		return clientHandle
+	}
+
+	return nil
+}
 
 // Getter for the clients queue singleton which holds the queue
 // of client waiting to be registered
@@ -119,11 +132,13 @@ func (client *Client) Start(
 		return nil, fmt.Errorf("an error occured while starting process for client %s: %w", client, err)
 	}
 
-	// Register the new client into the client queue and wait for it to be registered
+	// Update the client handle
 	clientHandle.Client.Pid = int32(clientCommand.Process.Pid)
 	clientHandle.Process = clientCommand.Process
-	ClientQueueLock.Lock()
-	defer ClientQueueLock.Unlock()
+
+	// Register the new client into the client queue and wait for it to be registered
+	clientQueueLock.Lock()
+	defer clientQueueLock.Unlock()
 	ClientQueue()[clientHandle.Client.GetId()] = clientHandle
 
 	return clientHandle, <-registration

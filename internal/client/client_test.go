@@ -1,7 +1,11 @@
 package client
 
 import (
+	"runtime"
 	"testing"
+	"time"
+
+	"github.com/life4/genesis/maps"
 )
 
 type MockedContext struct{}
@@ -25,15 +29,33 @@ var runClientTestLinux = Client{
 	StartClientTemplate: "{{.Name}}",
 }
 
+// Fake that a client is being registered
+func mockedScheduler() {
+	for {
+		queuedClients := maps.Values(ClientQueue())
+		if len(queuedClients) > 0 {
+			queuedClients[0].Registration <- nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
 func TestStartClient(t *testing.T) {
-	runClientTest := &runClientTestLinux
-	clientHandle, err := runClientTest.Start(&MockedContext{}, map[string]string{})
+	go mockedScheduler()
+
+	var runClientTest *Client = nil
+	switch runtime.GOOS {
+	case "windows":
+		runClientTest = &runClientTestWindows
+	case "linux":
+		runClientTest = &runClientTestLinux
+	default:
+		runClientTest = &runClientTestLinux
+	}
+
+	_, err := runClientTest.Start(&MockedContext{}, map[string]string{})
 	if err != nil {
 		t.Errorf("An error occured while running client %s: %s", runClientTest, err.Error())
-		return
-	}
-	if err := clientHandle.Process.Kill(); err != nil {
-		t.Errorf("An error occured while killing process %d: %s", clientHandle.Process.Pid, err.Error())
 		return
 	}
 }
