@@ -33,15 +33,30 @@ func registerClient(clientToRegister *client.Client) *RegisteredClient {
 		ClientPool()[clientToRegister.GetId()] = registeredClient
 	}
 
-	// Check if the client was queued, we must inform the submitter that the registering has happened
-	client.ClientQueueLock.Lock()
-	defer client.ClientQueueLock.Unlock()
-	if clientHandle, ok := client.ClientQueue()[clientToRegister.GetId()]; ok {
-		clientHandle.Registration <- nil
-	}
+	clientHandle := client.UnQueueClient(clientToRegister)
+	clientHandle.Registration <- nil
 
 	return registeredClient
+}
 
+// Look among the already registered clients and return the first matching client
+func findRegisteredClient(query *client.ClientQuery) *RegisteredClient {
+	clientPoolLock.Lock()
+	defer clientPoolLock.Unlock()
+
+	// The look by id is faster since its the primary key
+	if query.Id != nil {
+		return clientPool[*query.Id]
+	}
+
+	// Test all the registered clients one by one
+	for _, registeredClient := range ClientPool() {
+		if query.MatchClient(registeredClient.Client) {
+			return registeredClient
+		}
+	}
+
+	return nil
 }
 
 var (
@@ -62,24 +77,25 @@ func ClientPool() map[string]*RegisteredClient {
 // Get an already running client or start a new one from the query
 func ClientFromQuery(c *context.Context, query *client.ClientQuery) (*RegisteredClient, error) {
 	// First find a potential running client that matches the query
-	clientPoolLock.Lock()
-	for _, registeredClient := range ClientPool() {
-		if query.MatchClient(registeredClient.Client) {
-			clientPoolLock.Unlock()
-			return registeredClient, nil
-		}
+	if registeredClient := findRegisteredClient(query); registeredClient != nil {
+		return registeredClient, nil
 	}
-	// We must unlock the mutex here because client.Start will need it
-	clientPoolLock.Unlock()
 
 	// If no running client matches the query, try to start a new one
-	for _, client := range c.AvailableClients() {
-		if client.GetName() == query.GetName() {
-			clientHandle, err := client.Start(c, query.GetMetadata())
+	for _, availableClient := range c.AvailableClients() {
+		if availableClient.GetName() == query.GetName() {
+			clientHandle, err := availableClient.Start(c, query.GetMetadata())
 			if err != nil {
-				return nil, fmt.Errorf("could not start new client %s: %w", client, err)
+				return nil, fmt.Errorf("could not start new client %s: %w", availableClient, err)
 			}
-			return registerClient(clientHandle.Client), nil
+			// The client should now be registered
+			registeredClient := findRegisteredClient(&client.ClientQuery{
+				Id: &clientHandle.Client.Id,
+			})
+			if registeredClient == nil {
+				return nil, fmt.Errorf("client %s started but did not registered", clientHandle.Client.Id)
+			}
+			return registeredClient, nil
 		}
 	}
 
