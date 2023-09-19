@@ -2,20 +2,24 @@ package tools
 
 import (
 	"fmt"
-  "sync"
+	"path"
+	"sync"
+
+	"github.com/Acedyn/zorro-core/internal/context"
 )
 
 type CommandHandle struct {
 	Command *Command
-	Result chan error
+	Result  chan error
+	Context *context.Context
 }
 
 var (
 	commandQueue chan *CommandHandle
-	once           sync.Once
+	once         sync.Once
 )
 
-// Getter for the commands queue singleton which holds the queue 
+// Getter for the commands queue singleton which holds the queue
 // of command waiting to be scheduled
 func CommandQueue() chan *CommandHandle {
 	once.Do(func() {
@@ -35,14 +39,26 @@ func (command *Command) Traverse(task func(TraversableTool) error) error {
 }
 
 // The execution of the commands is handled by the scheduler, and processed by the clients
-func (command *Command) Execute() error {
-  result := make(chan error)
-  CommandQueue() <- &CommandHandle{
-    Command: command,
-    Result: result,
-  }
+func (command *Command) Execute(c *context.Context) error {
+	result := make(chan error)
+	CommandQueue() <- &CommandHandle{
+		Command: command,
+		Result:  result,
+		Context: c,
+	}
 
-  // Wait for the scheduler to take the command from the queue
-  // And let it set the result
-  return <- result
+	// Wait for the scheduler to take the command from the queue
+	// And let it set the result
+	return <-result
+}
+
+// Update the command with a patch
+func (command *Command) Patch(patch *Command) bool {
+	// Patch the local version of the command
+	isPatched := false
+	if command.GetBase().Patch(patch.GetBase()) {
+		isPatched = true
+	}
+
+	return isPatched
 }

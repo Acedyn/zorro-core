@@ -48,7 +48,7 @@ message ToolBase {
   // User friently version of the name without all its contraints
   optional string label = 4;
   // The status is only used for user feedback
-  zorro.ToolStatus status = 5;
+  optional zorro.ToolStatus status = 5;
   // Inputs and outputs
   map<string, zorro.Socket> inputs = 6;
   map<string, zorro.Socket> outputs = 7;

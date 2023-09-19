@@ -19,18 +19,18 @@ type StartClientContext interface {
 }
 
 type ClientHandle struct {
-	Client *Client
-  Process *os.Process
-	Result chan error
+	Client  *Client
+	Process *os.Process
+	Result  chan error
 }
 
 var (
 	clientQueueLock = &sync.Mutex{}
-	clientQueue map[string]*ClientHandle
-	once           sync.Once
+	clientQueue     map[string]*ClientHandle
+	once            sync.Once
 )
 
-// Getter for the clients queue singleton which holds the queue 
+// Getter for the clients queue singleton which holds the queue
 // of client waiting to be registered
 func ClientQueue() map[string]*ClientHandle {
 	once.Do(func() {
@@ -72,12 +72,12 @@ func (client *Client) Start(
 	context StartClientContext,
 	metadata map[string]string,
 ) (*ClientHandle, error) {
-  result := make(chan error)
+	result := make(chan error)
 	clientHandle := &ClientHandle{
 		Client: &(*client),
-    Result: result,
+		Result: result,
 	}
-  startingStatus := ClientStatus_STARTING
+	startingStatus := ClientStatus_STARTING
 	clientHandle.Client.Status = &startingStatus
 	clientHandle.Client.Metadata = maps.Merge(clientHandle.Client.GetMetadata(), metadata)
 
@@ -126,7 +126,27 @@ func (client *Client) Start(
 	defer clientQueueLock.Unlock()
 	ClientQueue()[clientHandle.Client.GetId()] = clientHandle
 
-  // Wait for the client to be registered on the scheduler
-  <-result
+	// Wait for the client to be registered on the scheduler
+	<-result
 	return clientHandle, nil
+}
+
+// Update the client with a patch
+func (client *Client) Patch(patch *Client) bool {
+	// Patch the local version of the client
+	isPatched := false
+	if maps.Equal(client.Metadata, patch.GetMetadata()) {
+		maps.Update(client.Metadata, patch.GetMetadata())
+		isPatched = true
+	}
+	if patch.Label != nil && client.Label != patch.Label {
+		client.Label = patch.Label
+		isPatched = true
+	}
+	if patch.Status != nil && client.Status != patch.Status {
+		client.Status = patch.Status
+		isPatched = true
+	}
+
+	return isPatched
 }
