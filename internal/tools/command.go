@@ -2,7 +2,6 @@ package tools
 
 import (
 	"fmt"
-	"path"
 	"sync"
 
 	"github.com/Acedyn/zorro-core/internal/context"
