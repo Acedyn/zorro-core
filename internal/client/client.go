@@ -19,13 +19,13 @@ type StartClientContext interface {
 }
 
 type ClientHandle struct {
-	Client  *Client
-	Process *os.Process
-	Result  chan error
+	Client       *Client
+	Process      *os.Process
+	Registration chan error
 }
 
 var (
-	clientQueueLock = &sync.Mutex{}
+	ClientQueueLock = &sync.Mutex{}
 	clientQueue     map[string]*ClientHandle
 	once            sync.Once
 )
@@ -72,10 +72,10 @@ func (client *Client) Start(
 	context StartClientContext,
 	metadata map[string]string,
 ) (*ClientHandle, error) {
-	result := make(chan error)
+	registration := make(chan error)
 	clientHandle := &ClientHandle{
-		Client: &(*client),
-		Result: result,
+		Client:       &(*client),
+		Registration: registration,
 	}
 	startingStatus := ClientStatus_STARTING
 	clientHandle.Client.Status = &startingStatus
@@ -122,13 +122,11 @@ func (client *Client) Start(
 	// Register the new client into the client queue and wait for it to be registered
 	clientHandle.Client.Pid = int32(clientCommand.Process.Pid)
 	clientHandle.Process = clientCommand.Process
-	clientQueueLock.Lock()
-	defer clientQueueLock.Unlock()
+	ClientQueueLock.Lock()
+	defer ClientQueueLock.Unlock()
 	ClientQueue()[clientHandle.Client.GetId()] = clientHandle
 
-	// Wait for the client to be registered on the scheduler
-	<-result
-	return clientHandle, nil
+	return clientHandle, <-registration
 }
 
 // Update the client with a patch
