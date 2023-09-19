@@ -15,8 +15,9 @@ var (
 	once           sync.Once
 )
 
-// Getter for the commands pool singleton
-func CommandPool() chan *CommandHandle {
+// Getter for the commands queue singleton which holds the queue 
+// of command waiting to be scheduled
+func CommandQueue() chan *CommandHandle {
 	once.Do(func() {
 		commandQueue = make(chan *CommandHandle)
 	})
@@ -35,13 +36,13 @@ func (command *Command) Traverse(task func(TraversableTool) error) error {
 
 // The execution of the commands is handled by the scheduler, and processed by the clients
 func (command *Command) Execute() error {
-  executionResult := make(chan error)
-  commandQueue <- &CommandHandle{
+  result := make(chan error)
+  CommandQueue() <- &CommandHandle{
     Command: command,
-    Result: executionResult,
+    Result: result,
   }
 
   // Wait for the scheduler to take the command from the queue
   // And let it set the result
-  return <- executionResult
+  return <- result
 }

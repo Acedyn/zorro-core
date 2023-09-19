@@ -1,7 +1,17 @@
 syntax = "proto3";
 
 package zorro;
-option go_package = "github.com/Acedyn/zorro-core/internal/scheduling";
+option go_package = "github.com/Acedyn/zorro-core/internal/client";
+
+// Filters used to select a client from a client pool
+message ClientQuery {
+  optional string name = 1;
+  optional int32 pid = 2;
+  optional string version = 3;
+  map<string, string> metadata = 4;
+  map<int32, string> stdout = 5;
+  map<int32, string> stderr = 6;
+}
 
 enum ClientStatus {
   STARTING = 0; // The program is starting
@@ -14,24 +24,26 @@ enum ClientStatus {
 
 // Clients are responsible for executing commands
 message Client {
+  // The Id is used to differentiate clients
+  string id = 1;
   // The name of the executable
-  string name = 1;
+  string name = 2;
   // Used to differentiate two same clients with a different version
-  string version = 2;
+  string version = 3;
   // User friently version of the name without all its contraints
-  optional string label = 3;
+  optional string label = 4;
   // Paths where we should look for the executable
-  repeated string paths = 4;
+  repeated string paths = 5;
   // Defines if this client can be used as a substitute for other clients
-  repeated string subsets = 5;
+  repeated string subsets = 6;
   // Template to run the program without the client running
-  string start_program_template = 6;
+  string start_program_template = 7;
   // Template to run the program with the client running
-  string start_client_template = 7;
+  string start_client_template = 8;
   // Help knowing at which state is the client
-  optional ClientStatus status = 8;
+  optional ClientStatus status = 9;
   // PID of the underlying running process
-  int32 pid = 9;
+  int32 pid = 10;
   // Extra data used mainly for filters
-  map<string, string> metadata = 10;
+  map<string, string> metadata = 11;
 }
