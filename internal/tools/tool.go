@@ -2,12 +2,23 @@ package tools
 
 import (
 	"github.com/life4/genesis/maps"
+  tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
+
+// Wrapped tool base with methods attached
+type ToolBase struct {
+  *tools_proto.ToolBase
+}
+
+// Representation of a tool
+type Tool interface {
+	GetBase() *ToolBase
+}
 
 // Traversable tool are nested tools linked via dependencies
 type TraversableTool interface {
+  Tool
 	Traverse(func(TraversableTool) error) error
-	GetBase() *ToolBase
 }
 
 func (tool *ToolBase) Patch(patch *ToolBase) bool {

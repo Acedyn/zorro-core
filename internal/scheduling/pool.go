@@ -4,54 +4,74 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Acedyn/zorro-core/internal/client"
 	"github.com/Acedyn/zorro-core/internal/context"
+	"github.com/Acedyn/zorro-core/internal/processor"
 	"github.com/Acedyn/zorro-core/internal/tools"
+
+	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 )
 
-// Internal struct to keep track of the running clients
-type RegisteredClient struct {
-	Client                *client.Client
-	CommandQueue          chan *tools.Command
-	ScheduledCommands     map[string]*tools.Command
-	ScheduledCommandsLock *sync.Mutex
+// Registered processors are ready to receive command requests
+type RegisteredProcessor struct {
+	*processor.Processor
+	// The host to connect to send commands
+	Host string
+	// Commands waiting to be scheduled
+	CommandQueue chan *tools.Command
+	// Commands scheduled and still running on the client side
+	RunningCommands     map[string]*tools.Command
+	RunningCommandsLock *sync.Mutex
+}
+
+var (
+	processorPoolLock = &sync.Mutex{}
+	processorPool     map[string]*RegisteredProcessor
+	once              sync.Once
+)
+
+// Getter for the clients pool singleton
+func ProcessorPool() map[string]*RegisteredProcessor {
+	once.Do(func() {
+		processorPool = map[string]*RegisteredProcessor{}
+	})
+
+	return processorPool
 }
 
 // Register the given client to the client pool
-func registerClient(clientToRegister *client.Client) *RegisteredClient {
+func registerProcessor(pendingProcessor *processor.PendingProcessor, host string) *RegisteredProcessor {
 	// Check if the client is already registered
-	clientPoolLock.Lock()
-	defer clientPoolLock.Unlock()
-	registeredClient, ok := ClientPool()[clientToRegister.GetId()]
+	processorPoolLock.Lock()
+	defer processorPoolLock.Unlock()
+	registeredProcessor, ok := ProcessorPool()[pendingProcessor.GetId()]
 	if !ok {
-		registeredClient = &RegisteredClient{
-			Client:                clientToRegister,
-			CommandQueue:          make(chan *tools.Command),
-			ScheduledCommands:     map[string]*tools.Command{},
-			ScheduledCommandsLock: &sync.Mutex{},
+		registeredProcessor = &RegisteredProcessor{
+			Processor:           pendingProcessor.Processor,
+			Host:                host,
+			CommandQueue:        make(chan *tools.Command),
+			RunningCommands:     map[string]*tools.Command{},
+			RunningCommandsLock: &sync.Mutex{},
 		}
-		ClientPool()[clientToRegister.GetId()] = registeredClient
+		ProcessorPool()[pendingProcessor.GetId()] = registeredProcessor
 	}
 
-	clientHandle := client.UnQueueClient(clientToRegister)
-	clientHandle.Registration <- nil
-
-	return registeredClient
+	pendingProcessor.Registration <- nil
+	return registeredProcessor
 }
 
 // Look among the already registered clients and return the first matching client
-func findRegisteredClient(query *client.ClientQuery) *RegisteredClient {
-	clientPoolLock.Lock()
-	defer clientPoolLock.Unlock()
+func findRegisteredProcessor(query *processor.ProcessorQuery) *RegisteredProcessor {
+	processorPoolLock.Lock()
+	defer processorPoolLock.Unlock()
 
 	// The look by id is faster since its the primary key
 	if query.Id != nil {
-		return clientPool[*query.Id]
+		return ProcessorPool()[*query.Id]
 	}
 
 	// Test all the registered clients one by one
-	for _, registeredClient := range ClientPool() {
-		if query.MatchClient(registeredClient.Client) {
+	for _, registeredClient := range ProcessorPool() {
+		if query.MatchProcessor(registeredClient.Processor) {
 			return registeredClient
 		}
 	}
@@ -59,43 +79,30 @@ func findRegisteredClient(query *client.ClientQuery) *RegisteredClient {
 	return nil
 }
 
-var (
-	clientPoolLock = &sync.Mutex{}
-	clientPool     map[string]*RegisteredClient
-	once           sync.Once
-)
-
-// Getter for the clients pool singleton
-func ClientPool() map[string]*RegisteredClient {
-	once.Do(func() {
-		clientPool = map[string]*RegisteredClient{}
-	})
-
-	return clientPool
-}
-
-// Get an already running client or start a new one from the query
-func ClientFromQuery(c *context.Context, query *client.ClientQuery) (*RegisteredClient, error) {
-	// First find a potential running client that matches the query
-	if registeredClient := findRegisteredClient(query); registeredClient != nil {
+// Get an already running processor or start a new one from the query
+func GetOrStartProcessor(c *context.Context, query *processor.ProcessorQuery) (*RegisteredProcessor, error) {
+	// First find a potential running processors that matches the query
+	if registeredClient := findRegisteredProcessor(query); registeredClient != nil {
 		return registeredClient, nil
 	}
 
-	// If no running client matches the query, try to start a new one
-	for _, availableClient := range c.AvailableClients() {
-		if availableClient.GetName() == query.GetName() {
-			clientHandle, err := availableClient.Start(c, query.GetMetadata())
+	// If no running processors matches the query, try to start a new one
+	for _, availableProcessor := range c.AvailableProcessors() {
+		if availableProcessor.GetName() == query.GetName() {
+			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), c.Environ(true))
 			if err != nil {
-				return nil, fmt.Errorf("could not start new client %s: %w", availableClient, err)
+				return nil, fmt.Errorf("could not start new client %s: %w", availableProcessor, err)
 			}
 			// The client should now be registered
-			registeredClient := findRegisteredClient(&client.ClientQuery{
-				Id: &clientHandle.Client.Id,
+			registeredProcessor := findRegisteredProcessor(&processor.ProcessorQuery{
+				ProcessorQuery: &processor_proto.ProcessorQuery{
+					Id: &pendingProcessor.Id,
+				},
 			})
-			if registeredClient == nil {
-				return nil, fmt.Errorf("client %s started but did not registered", clientHandle.Client.Id)
+			if registeredProcessor == nil {
+				return nil, fmt.Errorf("client %s started but did not registered", pendingProcessor.Id)
 			}
-			return registeredClient, nil
+			return registeredProcessor, nil
 		}
 	}
 

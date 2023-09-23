@@ -5,18 +5,31 @@ import (
 	"sync"
 
 	"github.com/Acedyn/zorro-core/internal/context"
+
+  tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
 
+var (
+	commandQueue chan *CommandHandle
+	once         sync.Once
+)
+
+// Wrapped command with methods attached
+type Command struct {
+  *tools_proto.Command
+}
+
+// Started command, waiting to be sheduled
 type CommandHandle struct {
 	Command *Command
 	Result  chan error
 	Context *context.Context
 }
 
-var (
-	commandQueue chan *CommandHandle
-	once         sync.Once
-)
+// Get the wrapped base with all its methods
+func (command *Command) GetBase() *ToolBase {
+  return &ToolBase{ToolBase: command.Command.GetBase()}
+}
 
 // Getter for the commands queue singleton which holds the queue
 // of command waiting to be scheduled

@@ -3,6 +3,7 @@ module github.com/Acedyn/zorro-core
 go 1.21.1
 
 require (
+	github.com/Acedyn/zorro-proto v0.0.0-20230923100045-0ff8de1c9801 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/life4/genesis v1.9.0 // indirect
 	golang.org/x/net v0.12.0 // indirect

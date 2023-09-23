@@ -1,4 +1,5 @@
-package client
+//go:build exclude
+package processor
 
 import (
 	"runtime"
@@ -10,7 +11,7 @@ import (
 
 type MockedContext struct{}
 
-func (context *MockedContext) AvailableClients() []*Client {
+func (context *MockedContext) AvailableProcessors() []*ProcessorQuery {
 	return []*Client{&runClientTestLinux, &runClientTestWindows}
 }
 
