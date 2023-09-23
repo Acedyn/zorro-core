@@ -5,12 +5,23 @@ import (
 
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
+  tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
+
+// Wrapped action with methods attached
+type Action struct {
+  *tools_proto.Action
+}
 
 // Hold the returned value of a child task
 type ChildTaskResult struct {
 	Err error
 	Key string
+}
+
+// Get the wrapped base with all its methods
+func (action *Action) GetBase() *ToolBase {
+  return &ToolBase{ToolBase: action.Action.GetBase()}
 }
 
 // Find and traverse children that have all their dependencies (upstream)
@@ -27,10 +38,10 @@ func (action *Action) getReadyChildren(pending map[string]bool, completed []stri
 		// completed dependencies
 		if slices.All(child.Upstream, func(el string) bool { return slices.Contains(completed, el) }) {
 			switch child.GetChild().(type) {
-			case *ActionChild_Action:
-				readyChildren[childKey] = child.GetAction()
-			case *ActionChild_Command:
-				readyChildren[childKey] = child.GetCommand()
+			case *tools_proto.ActionChild_Action:
+        readyChildren[childKey] = &Action{Action: child.GetAction()}
+			case *tools_proto.ActionChild_Command:
+        readyChildren[childKey] = &Command{Command: child.GetCommand()}
 			}
 		}
 	}

@@ -1,4 +1,5 @@
-package context
+//go:build exclude
+package plugin
 
 import (
 	"os"

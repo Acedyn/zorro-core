@@ -5,11 +5,25 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Acedyn/zorro-core/internal/client"
+	"github.com/Acedyn/zorro-core/internal/processor"
+	"github.com/Acedyn/zorro-core/internal/plugin"
 
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
+	context_proto "github.com/Acedyn/zorro-proto/zorroprotos/context"
+	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 )
+
+// Wrapped context with methods attached
+type Context struct {
+  *context_proto.Context
+}
+
+func (context *Context) GetPlugins() []*plugin.Plugin {
+  return slices.Map(context.Context.GetPlugins(), func (p *plugin_proto.Plugin) *plugin.Plugin {
+    return &plugin.Plugin{Plugin: p}
+  })
+}
 
 // Gather the environment variables of all the context's plugins
 // in the form "key=value".
@@ -60,13 +74,14 @@ func (context *Context) Environ(includeCurrent bool) []string {
   })
 }
 
-func (context *Context) AvailableClients() []*client.Client {
-  availableClients := []*client.Client{}
+// Flatten list of all the processors present in the selected plugins
+func (context *Context) AvailableProcessors() []*processor.Processor {
+  availableProcessors := []*processor.Processor{}
   for _, plugin := range context.GetPlugins() {
-    for _, client := range plugin.GetClients() {
-      availableClients = append(availableClients, client)
+    for _, processor := range plugin.GetProcessors() {
+      availableProcessors = append(availableProcessors, processor)
     }
   }
 
-  return availableClients
+  return availableProcessors
 }

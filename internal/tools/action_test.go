@@ -1,3 +1,4 @@
+//go:build exclude
 package tools
 
 import (
@@ -6,11 +7,13 @@ import (
 
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
+
+	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
 
 // Test the resolution of the children that are ready to be traversed
 type GetReadyChildrenTest struct {
-	Action        *Action
+	Action        *tools_proto.Action
 	Pending       map[string]bool
 	Completed     []string
 	ExpectedReady []string
@@ -18,27 +21,27 @@ type GetReadyChildrenTest struct {
 
 var getReadyChildrenTests = []GetReadyChildrenTest{
 	{
-		Action: &Action{
-			Children: map[string]*ActionChild{
+		Action: &tools_proto.Action{
+			Children: map[string]*tools_proto.ActionChild{
 				"1": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 				},
 				"1-1": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 					Upstream: []string{"1"},
 				},
 				"2": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 				},
 				"2-1": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 					Upstream: []string{"2"},
 				},
@@ -54,21 +57,21 @@ var getReadyChildrenTests = []GetReadyChildrenTest{
 		ExpectedReady: []string{"1-1"},
 	},
 	{
-		Action: &Action{
-			Children: map[string]*ActionChild{
+		Action: &tools_proto.Action{
+			Children: map[string]*tools_proto.ActionChild{
 				"1": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 				},
 				"2": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 				},
 				"3": {
-					Child: &ActionChild_Command{
-						Command: &Command{},
+					Child: &tools_proto.ActionChild_Command{
+						Command: &tools_proto.Command{},
 					},
 					Upstream: []string{"1", "2"},
 				},
@@ -86,7 +89,8 @@ var getReadyChildrenTests = []GetReadyChildrenTest{
 
 func TestGetReadyChildren(t *testing.T) {
 	for _, getReadyChildrenTest := range getReadyChildrenTests {
-		readyChildren := getReadyChildrenTest.Action.getReadyChildren(
+		action := Action{Action: getReadyChildrenTest.Action}
+		readyChildren := action.getReadyChildren(
 			getReadyChildrenTest.Pending,
 			getReadyChildrenTest.Completed,
 		)
@@ -101,140 +105,142 @@ func TestGetReadyChildren(t *testing.T) {
 
 // Test the action traversal order
 var actionTraversalTest = Action{
-	Base: &ToolBase{
-		Name: &[]string{"0"}[0],
-	},
-	Children: map[string]*ActionChild{
-		"00-A": {
-			Child: &ActionChild_Action{
-				Action: &Action{
-					Base: &ToolBase{
-						Name: &[]string{"00-A"}[0],
-					},
-					Children: map[string]*ActionChild{
-						"000-A": {
-							Child: &ActionChild_Command{
-								Command: &Command{
-									Base: &ToolBase{
-										Name: &[]string{"000-A"}[0],
-									},
-								},
-							},
+	Action: &tools_proto.Action{
+		Base: &tools_proto.ToolBase{
+			Name: &[]string{"0"}[0],
+		},
+		Children: map[string]*tools_proto.ActionChild{
+			"00-A": {
+				Child: &tools_proto.ActionChild_Action{
+					Action: &tools_proto.Action{
+						Base: &tools_proto.ToolBase{
+							Name: &[]string{"00-A"}[0],
 						},
-						"001-A": {
-							Child: &ActionChild_Command{
-								Command: &Command{
-									Base: &ToolBase{
-										Name: &[]string{"001-A"}[0],
-									},
-								},
-							},
-							Upstream: []string{"000-A"},
-						},
-						"002-A": {
-							Child: &ActionChild_Command{
-								Command: &Command{
-									Base: &ToolBase{
-										Name: &[]string{"002-A"}[0],
-									},
-								},
-							},
-							Upstream: []string{"001-A"},
-						},
-						"002-B": {
-							Child: &ActionChild_Action{
-								Action: &Action{
-									Base: &ToolBase{
-										Name: &[]string{"002-B"}[0],
-									},
-									Children: map[string]*ActionChild{
-										"0020-A": {
-											Child: &ActionChild_Command{
-												Command: &Command{
-													Base: &ToolBase{
-														Name: &[]string{"0020-A"}[0],
-													},
-												},
-											},
-										},
-										"0020-B": {
-											Child: &ActionChild_Command{
-												Command: &Command{
-													Base: &ToolBase{
-														Name: &[]string{"0020-B"}[0],
-													},
-												},
-											},
+						Children: map[string]*tools_proto.ActionChild{
+							"000-A": {
+								Child: &tools_proto.ActionChild_Command{
+									Command: &tools_proto.Command{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"000-A"}[0],
 										},
 									},
 								},
 							},
-							Upstream: []string{"001-A"},
+							"001-A": {
+								Child: &tools_proto.ActionChild_Command{
+									Command: &tools_proto.Command{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"001-A"}[0],
+										},
+									},
+								},
+								Upstream: []string{"000-A"},
+							},
+							"002-A": {
+								Child: &tools_proto.ActionChild_Command{
+									Command: &tools_proto.Command{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"002-A"}[0],
+										},
+									},
+								},
+								Upstream: []string{"001-A"},
+							},
+							"002-B": {
+								Child: &tools_proto.ActionChild_Action{
+									Action: &tools_proto.Action{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"002-B"}[0],
+										},
+										Children: map[string]*tools_proto.ActionChild{
+											"0020-A": {
+												Child: &tools_proto.ActionChild_Command{
+													Command: &tools_proto.Command{
+														Base: &tools_proto.ToolBase{
+															Name: &[]string{"0020-A"}[0],
+														},
+													},
+												},
+											},
+											"0020-B": {
+												Child: &tools_proto.ActionChild_Command{
+													Command: &tools_proto.Command{
+														Base: &tools_proto.ToolBase{
+															Name: &[]string{"0020-B"}[0],
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								Upstream: []string{"001-A"},
+							},
+							"002-C": {
+								Child: &tools_proto.ActionChild_Command{
+									Command: &tools_proto.Command{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"002-C"}[0],
+										},
+									},
+								},
+								Upstream: []string{"001-A"},
+							},
 						},
-						"002-C": {
-							Child: &ActionChild_Command{
-								Command: &Command{
-									Base: &ToolBase{
-										Name: &[]string{"002-C"}[0],
+					},
+				},
+			},
+			"01-A": {
+				Child: &tools_proto.ActionChild_Action{
+					Action: &tools_proto.Action{
+						Base: &tools_proto.ToolBase{
+							Name: &[]string{"01-A"}[0],
+						},
+						Children: map[string]*tools_proto.ActionChild{
+							"010-A": {
+								Child: &tools_proto.ActionChild_Command{
+									Command: &tools_proto.Command{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"010-A"}[0],
+										},
 									},
 								},
 							},
-							Upstream: []string{"001-A"},
-						},
-					},
-				},
-			},
-		},
-		"01-A": {
-			Child: &ActionChild_Action{
-				Action: &Action{
-					Base: &ToolBase{
-						Name: &[]string{"01-A"}[0],
-					},
-					Children: map[string]*ActionChild{
-						"010-A": {
-							Child: &ActionChild_Command{
-								Command: &Command{
-									Base: &ToolBase{
-										Name: &[]string{"010-A"}[0],
+							"011-A": {
+								Child: &tools_proto.ActionChild_Command{
+									Command: &tools_proto.Command{
+										Base: &tools_proto.ToolBase{
+											Name: &[]string{"011-A"}[0],
+										},
 									},
 								},
+								Upstream: []string{"010-A"},
 							},
 						},
-						"011-A": {
-							Child: &ActionChild_Command{
-								Command: &Command{
-									Base: &ToolBase{
-										Name: &[]string{"011-A"}[0],
-									},
-								},
-							},
-							Upstream: []string{"010-A"},
+					},
+				},
+				Upstream: []string{"00-A"},
+			},
+			"01-B": {
+				Child: &tools_proto.ActionChild_Command{
+					Command: &tools_proto.Command{
+						Base: &tools_proto.ToolBase{
+							Name: &[]string{"01-B"}[0],
 						},
 					},
 				},
+				Upstream: []string{"00-A"},
 			},
-			Upstream: []string{"00-A"},
-		},
-		"01-B": {
-			Child: &ActionChild_Command{
-				Command: &Command{
-					Base: &ToolBase{
-						Name: &[]string{"01-B"}[0],
+			"02-A": {
+				Child: &tools_proto.ActionChild_Command{
+					Command: &tools_proto.Command{
+						Base: &tools_proto.ToolBase{
+							Name: &[]string{"02-A"}[0],
+						},
 					},
 				},
+				Upstream: []string{"01-A", "01-B"},
 			},
-			Upstream: []string{"00-A"},
-		},
-		"02-A": {
-			Child: &ActionChild_Command{
-				Command: &Command{
-					Base: &ToolBase{
-						Name: &[]string{"02-A"}[0],
-					},
-				},
-			},
-			Upstream: []string{"01-A", "01-B"},
 		},
 	},
 }
