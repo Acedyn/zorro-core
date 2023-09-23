@@ -1,45 +1,45 @@
-//go:build exclude
 package plugin
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 )
 
-// Test the default initialization of a plugin's field
-var pluginInitTests = map[string]*Plugin{
-	"/foo/bar/zorro-plugin.json": {
-		Name: "foo_bar",
-		Tools: &PluginTools{
-			Commands: []string{"./commands", "./foo/commands"},
-		},
+// Mocked plugin to test the InitDefaults methods
+var pluginInitTest = Plugin{
+  Plugin: &plugin_proto.Plugin{
+    Name: "foo_bar",
+    Path: "/foo/bar/zorro-plugin.json",
+    Tools: &plugin_proto.PluginTools{
+      Commands: []string{"./commands", "./foo/commands"},
+    },
 	},
 }
 
+// Test the InitDefaults methods
 func TestPluginInit(t *testing.T) {
-	for pluginPath, pluginTest := range pluginInitTests {
-		pluginTest.Path = &pluginPath
-		pluginTest.InitFields()
+  pluginInitTest.InitDefaults()
 
-		if *pluginTest.Label != "Foo Bar" {
-			t.Errorf("invalid plugin label initialized: %s", *pluginTest.Label)
-		}
+  if pluginInitTest.Label != "Foo Bar" {
+    t.Errorf("invalid plugin label initialized: %s", pluginInitTest.Label)
+  }
 
-		if pluginTest.Tools.Commands[0] != filepath.Join("/foo/bar/commands") {
-			t.Errorf("invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[0])
-		}
+  if pluginInitTest.Tools.Commands[0] != filepath.Join("/foo/bar/commands") {
+    t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[0])
+  }
 
-		if pluginTest.Tools.Commands[1] != filepath.Join("/foo/bar/foo/commands") {
-			t.Errorf("invalid plugin command paths initialized: %s", pluginTest.Tools.Commands[1])
-		}
-	}
+  if pluginInitTest.Tools.Commands[1] != filepath.Join("/foo/bar/foo/commands") {
+    t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[1])
+  }
 }
 
 // Test the loading of a bare plugin
 func TestLoadPluginBare(t *testing.T) {
 	pluginPath := "/foo/bar@1.2/zorro-plugin.json"
-	plugin := LoadPluginBare(pluginPath)
+	plugin := GetPluginBare(pluginPath)
 
 	if plugin.Name != "bar" {
 		t.Errorf("invalid bare plugin's name loaded: %s", plugin.Name)
@@ -50,7 +50,7 @@ func TestLoadPluginBare(t *testing.T) {
 	}
 }
 
-// Test if the loaded plugins correspond to the file's content
+// Expected values for the loaded mocked plugins
 type loadPluginFromFileTest struct {
 	ExpectedName     string
 	ExpectedVersion  string
@@ -77,6 +77,7 @@ var loadPluginFromFileTests = map[string]*loadPluginFromFileTest{
 	},
 }
 
+// Test the loading of the plugins files
 func TestLoadPluginFromFile(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
@@ -86,7 +87,7 @@ func TestLoadPluginFromFile(t *testing.T) {
 
 	for path, expectedPlugin := range loadPluginFromFileTests {
 		fullPath := filepath.Join(cwdPath, "test", "mock", path)
-		loadedPlugin, err := LoadPluginFromFile(fullPath)
+		loadedPlugin, err := GetPluginFromFile(fullPath)
 		if err != nil {
 			t.Errorf("an error occured while loading the plugin at path %s\n\t%s", path, err)
 		}
