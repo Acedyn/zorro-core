@@ -55,6 +55,7 @@ func registerProcessor(pendingProcessor *processor.PendingProcessor, host string
 		ProcessorPool()[pendingProcessor.GetId()] = registeredProcessor
 	}
 
+  processor.UnQueueProcessor(pendingProcessor)
 	pendingProcessor.Registration <- nil
 	return registeredProcessor
 }

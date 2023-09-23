@@ -2,8 +2,6 @@ package processor
 
 import (
 	"sync"
-
-  processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 )
 
 var (
@@ -29,15 +27,12 @@ func ProcessorQueue() map[string]*PendingProcessor {
 }
 
 // Check if the processor was queued and remove it from the queue
-func UnQueueProcessor(processor *processor_proto.ProcessorQuery) *PendingProcessor {
+func UnQueueProcessor(pendingProcessor *PendingProcessor) {
 	processorQueueLock.Lock()
 	defer processorQueueLock.Unlock()
 
-	if clientHandle, ok := ProcessorQueue()[processor.GetId()]; ok {
-		delete(ProcessorQueue(), processor.GetId())
-		return clientHandle
+	if _, ok := ProcessorQueue()[pendingProcessor.GetId()]; ok {
+		delete(ProcessorQueue(), pendingProcessor.GetId())
 	}
-
-	return nil
 }
 

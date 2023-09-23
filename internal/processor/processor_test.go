@@ -1,4 +1,3 @@
-//go:build exclude
 package processor
 
 import (
@@ -7,56 +6,59 @@ import (
 	"time"
 
 	"github.com/life4/genesis/maps"
+	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 )
 
-type MockedContext struct{}
-
-func (context *MockedContext) AvailableProcessors() []*ProcessorQuery {
-	return []*Client{&runClientTestLinux, &runClientTestWindows}
+// Mocked processors to start
+var startClientTestWindows = Processor{
+  Processor: &processor_proto.Processor{
+    Name:                "cmd",
+    StartProcessorTemplate: "{{.Name}}",
+  },
 }
 
-func (context *MockedContext) Environ(b bool) []string {
-	return []string{}
+var startClientTestLinux = Processor{
+  Processor: &processor_proto.Processor{
+    Name:                "bash",
+    StartProcessorTemplate: "{{.Name}}",
+  },
 }
 
-// Test running a new client's process
-var runClientTestWindows = Client{
-	Name:                "cmd",
-	StartClientTemplate: "{{.Name}}",
-}
-
-var runClientTestLinux = Client{
-	Name:                "bash",
-	StartClientTemplate: "{{.Name}}",
-}
-
-// Fake that a client is being registered
-func mockedScheduler() {
+// Mocked scheduler that will falsely register the processors
+func mockedScheduler(stop chan bool) {
 	for {
-		queuedClients := maps.Values(ClientQueue())
-    for _, queuedClient := range queuedClients {
-			queuedClient.Registration <- nil
-		}
-		time.Sleep(100 * time.Millisecond)
+    select {
+    case <- stop:
+        return
+    default:
+      pendingProcessors := maps.Values(ProcessorQueue())
+      for _, pendingProcessor := range pendingProcessors {
+        UnQueueProcessor(pendingProcessor)
+        pendingProcessor.Registration <- nil
+      }
+      time.Sleep(100 * time.Millisecond)
+    }
 	}
 }
 
-func TestStartClient(t *testing.T) {
-	go mockedScheduler()
+// Start the Start() methods of a processor
+func TestStartProcessor(t *testing.T) {
+  stopScheduler := make(chan bool)
+	go mockedScheduler(stopScheduler)
 
-	var runClientTest *Client = nil
+	var startProcessorTest *Processor = nil
 	switch runtime.GOOS {
 	case "windows":
-		runClientTest = &runClientTestWindows
+		startProcessorTest = &startClientTestWindows
 	case "linux":
-		runClientTest = &runClientTestLinux
+		startProcessorTest = &startClientTestLinux
 	default:
-		runClientTest = &runClientTestLinux
+		startProcessorTest = &startClientTestLinux
 	}
 
-	_, err := runClientTest.Start(&MockedContext{}, map[string]string{})
+	_, err := startProcessorTest.Start(map[string]string{}, []string{})
 	if err != nil {
-		t.Errorf("An error occured while running client %s: %s", runClientTest, err.Error())
+		t.Errorf("An error occured while running client %s: %s", startProcessorTest, err.Error())
 		return
 	}
 }
