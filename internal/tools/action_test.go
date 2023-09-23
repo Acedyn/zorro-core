@@ -1,4 +1,3 @@
-//go:build exclude
 package tools
 
 import (
