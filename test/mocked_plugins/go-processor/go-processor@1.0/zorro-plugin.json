@@ -1,0 +1,17 @@
+{
+  "env": {
+    "PATH": {
+      "append": [
+        "./bin"
+      ]
+    }
+  },
+  "programs": [
+    {
+      "name": "zorro-go-client"
+      "version": "1.0"
+      "launch_client_template": "{.Name}"
+    }
+  ]
+}
+
