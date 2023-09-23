@@ -1,4 +1,3 @@
-//go:build exclude
 package plugin
 
 import (
@@ -7,37 +6,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Acedyn/zorro-core/internal/config"
+	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 )
 
-// Test the result of multiple version comparisons
-var versionComparisonsTests = map[struct {
-	a string
-	b string
-}]VersionOperator{
-	{a: "3.5", b: "3.4"}:            VersionOperator_MORE_EQUAL,
-	{a: "2.1.4", b: "2.1.4"}:        VersionOperator_EQUAL,
-	{a: "2.1", b: "2.1.4"}:          VersionOperator_EQUAL,
-	{a: "3.5.alpha", b: "3.5.beta"}: VersionOperator_LESS_EQUAL,
-	{a: "1.5.prod", b: "3.5.alpha"}: VersionOperator_LESS_EQUAL,
-}
-
-func TestVersionComparison(t *testing.T) {
-	for comparison, expectedResult := range versionComparisonsTests {
-		result := CompareVersions(comparison.a, comparison.b)
-		if result != expectedResult {
-			t.Errorf("invalid version comparison result: %s %s %s (expected: %s)", comparison.a, result, comparison.b, expectedResult)
-		}
-	}
-}
-
-// Test the search of plugins in a directory
+// Expected version count to be found for each plugins
 var getAllPluginVersionsTests = map[string]int{
 	"baz": 2,
 	"bar": 2,
 	"foo": 3,
 }
 
+// Test the FindPluginVersions function
 func TestGetAllPluginVersion(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
@@ -47,8 +26,8 @@ func TestGetAllPluginVersion(t *testing.T) {
 	fullPath := filepath.Join(cwdPath, "test", "mock")
 
 	for name, expectedPluginCount := range getAllPluginVersionsTests {
-		plugins := FindPluginVersions(name, &config.PluginConfig{
-			PluginPaths: []string{fullPath},
+		plugins := FindPluginVersions(name, &config_proto.PluginConfig{
+			Repos: []string{fullPath},
 		})
 
 		if expectedPluginCount != len(plugins) {
@@ -57,6 +36,7 @@ func TestGetAllPluginVersion(t *testing.T) {
 	}
 }
 
+// Plugin queries and their expected resolved plugins
 var pluginResolutionTests = map[string]map[string]string{
 	"foo>=3.0.3 bar==2.3 baz<=5.6": {
 		"foo": "3.2",
@@ -68,6 +48,7 @@ var pluginResolutionTests = map[string]map[string]string{
 	},
 }
 
+// Test the ResolvePlugins function
 func TestPluginResolution(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
@@ -78,8 +59,8 @@ func TestPluginResolution(t *testing.T) {
 
 	for pluginQuery, expectedVersions := range pluginResolutionTests {
 		query := strings.Split(pluginQuery, " ")
-		resolvedPlugins, err := ResolvePlugins(query, &config.PluginConfig{
-			PluginPaths: []string{fullPath},
+		resolvedPlugins, err := ResolvePlugins(query, &config_proto.PluginConfig{
+			Repos: []string{fullPath},
 		})
 		if err != nil {
 			t.Errorf("could not resolve plugin graph: %s", err.Error())
