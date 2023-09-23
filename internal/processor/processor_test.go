@@ -5,45 +5,48 @@ import (
 	"testing"
 	"time"
 
-	"github.com/life4/genesis/maps"
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
+	"github.com/life4/genesis/maps"
 )
 
 // Mocked processors to start
 var startClientTestWindows = Processor{
-  Processor: &processor_proto.Processor{
-    Name:                "cmd",
-    StartProcessorTemplate: "{{.Name}}",
-  },
+	Processor: &processor_proto.Processor{
+		Name:                   "cmd",
+		StartProcessorTemplate: "{{.Name}}",
+	},
 }
 
 var startClientTestLinux = Processor{
-  Processor: &processor_proto.Processor{
-    Name:                "bash",
-    StartProcessorTemplate: "{{.Name}}",
-  },
+	Processor: &processor_proto.Processor{
+		Name:                   "bash",
+		StartProcessorTemplate: "{{.Name}}",
+	},
 }
 
 // Mocked scheduler that will falsely register the processors
 func mockedScheduler(stop chan bool) {
 	for {
-    select {
-    case <- stop:
-        return
-    default:
-      pendingProcessors := maps.Values(ProcessorQueue())
-      for _, pendingProcessor := range pendingProcessors {
-        UnQueueProcessor(pendingProcessor)
-        pendingProcessor.Registration <- nil
-      }
-      time.Sleep(100 * time.Millisecond)
-    }
+		select {
+		case <-stop:
+			return
+		default:
+			processorQueueLock.Lock()
+			pendingProcessors := maps.Values(ProcessorQueue())
+			processorQueueLock.Unlock()
+			for _, pendingProcessor := range pendingProcessors {
+				UnQueueProcessor(pendingProcessor)
+				pendingProcessor.Registration <- nil
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 
 // Start the Start() methods of a processor
 func TestStartProcessor(t *testing.T) {
-  stopScheduler := make(chan bool)
+	stopScheduler := make(chan bool)
+	defer func() { stopScheduler <- true }()
 	go mockedScheduler(stopScheduler)
 
 	var startProcessorTest *Processor = nil
