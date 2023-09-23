@@ -1,0 +1,3 @@
+[submodule "zorro-proto"]
+	path = protos
+	url = https://github.com/Acedyn/zorro-proto
