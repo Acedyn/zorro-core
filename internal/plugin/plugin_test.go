@@ -86,7 +86,7 @@ func TestLoadPluginFromFile(t *testing.T) {
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 
 	for path, expectedPlugin := range loadPluginFromFileTests {
-		fullPath := filepath.Join(cwdPath, "test", "mock", path)
+		fullPath := filepath.Join(cwdPath, "test", "mocked_plugins", path)
 		loadedPlugin, err := GetPluginFromFile(fullPath)
 		if err != nil {
 			t.Errorf("an error occured while loading the plugin at path %s\n\t%s", path, err)
