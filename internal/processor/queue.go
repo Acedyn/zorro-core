@@ -27,11 +27,14 @@ func ProcessorQueue() map[string]*PendingProcessor {
 }
 
 // Check if the processor was queued and remove it from the queue
-func UnQueueProcessor(pendingProcessor *PendingProcessor) {
+func UnQueueProcessor(processorId string) *PendingProcessor {
 	processorQueueLock.Lock()
 	defer processorQueueLock.Unlock()
 
-	if _, ok := ProcessorQueue()[pendingProcessor.GetId()]; ok {
-		delete(ProcessorQueue(), pendingProcessor.GetId())
+	if pendingProcessor, ok := ProcessorQueue()[processorId]; ok {
+		delete(ProcessorQueue(), processorId)
+		return pendingProcessor
 	}
+
+	return nil
 }

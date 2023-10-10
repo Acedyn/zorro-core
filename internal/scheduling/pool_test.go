@@ -71,7 +71,7 @@ func mockedScheduler(stop chan bool) {
 		default:
 			pendingProcessors := maps.Values(processor.ProcessorQueue())
 			for _, pendingProcessor := range pendingProcessors {
-				registerProcessor(pendingProcessor, "")
+				registerProcessor(pendingProcessor.Processor, "")
 			}
 			time.Sleep(100 * time.Millisecond)
 		}

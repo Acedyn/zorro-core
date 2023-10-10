@@ -38,24 +38,26 @@ func ProcessorPool() map[string]*RegisteredProcessor {
 }
 
 // Register the given client to the client pool
-func registerProcessor(pendingProcessor *processor.PendingProcessor, host string) *RegisteredProcessor {
+func registerProcessor(processorToRegister *processor.Processor, host string) *RegisteredProcessor {
 	// Check if the client is already registered
 	processorPoolLock.Lock()
 	defer processorPoolLock.Unlock()
-	registeredProcessor, ok := ProcessorPool()[pendingProcessor.GetId()]
+	registeredProcessor, ok := ProcessorPool()[processorToRegister.GetId()]
 	if !ok {
 		registeredProcessor = &RegisteredProcessor{
-			Processor:           pendingProcessor.Processor,
+			Processor:           processorToRegister,
 			Host:                host,
 			CommandQueue:        make(chan *tools.Command),
 			RunningCommands:     map[string]*tools.Command{},
 			RunningCommandsLock: &sync.Mutex{},
 		}
-		ProcessorPool()[pendingProcessor.GetId()] = registeredProcessor
+		ProcessorPool()[processorToRegister.GetId()] = registeredProcessor
 	}
 
-	processor.UnQueueProcessor(pendingProcessor)
-	pendingProcessor.Registration <- nil
+	// If the processor was in the processor queue, inform that the registration is done
+	if pendingProcessor := processor.UnQueueProcessor(processorToRegister.GetId()); pendingProcessor != nil {
+		pendingProcessor.Registration <- nil
+	}
 	return registeredProcessor
 }
 
