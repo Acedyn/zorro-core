@@ -17,11 +17,8 @@ type schedulingServer struct {
 
 // As soon as a processor starts, it has to registers itself
 func (service *schedulingServer) RegisterProcessor(c context.Context, processorRegistration *scheduling_proto.ProcessorRegistration) (*processor_proto.Processor, error) {
-	registeredProcessor := registerProcessor(&processor.PendingProcessor{
-		Processor: &processor.Processor{
-			Processor: processorRegistration.Processor,
-		},
-		Registration: make(chan error),
+	registeredProcessor := registerProcessor(&processor.Processor{
+		Processor: processorRegistration.Processor,
 	}, processorRegistration.Host)
 
 	return registeredProcessor.Processor.Processor, nil
