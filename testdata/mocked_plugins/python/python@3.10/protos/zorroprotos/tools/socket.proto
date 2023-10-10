@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/tools";
+
+// A socket acts as a payload for an input/output between two tools
+message Socket {
+  // The raw data can then be casted into a different datatype
+  oneof raw {
+    string raw_string = 1;
+    int32 raw_integer = 2;
+    float raw_number = 3;
+    bytes raw_binary = 4;
+  }
+  // Indicator for the processor to cast the raw data into any datatype
+  string cast = 5;
+}
+

@@ -7,7 +7,7 @@ import (
 var (
 	processorQueueLock = &sync.Mutex{}
 	processorQueue     map[string]*PendingProcessor
-	once            sync.Once
+	once               sync.Once
 )
 
 // Processor that is waiting to be registered
@@ -35,4 +35,3 @@ func UnQueueProcessor(pendingProcessor *PendingProcessor) {
 		delete(ProcessorQueue(), pendingProcessor.GetId())
 	}
 }
-

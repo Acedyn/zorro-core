@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/context";
+
+import "zorroprotos/plugin/plugin.proto";
+
+// Contexts represent the users's selection and all operations depends on it
+message Context {
+  // List all the available plugins in the current context
+  repeated Plugin plugins = 1;
+}

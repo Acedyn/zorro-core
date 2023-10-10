@@ -11,40 +11,42 @@ import (
 	context_proto "github.com/Acedyn/zorro-proto/zorroprotos/context"
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
+	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 )
 
 // Mocked context to test processor queries
 var contextTest = context.Context{
-  Context: &context_proto.Context{
-    Plugins: []*plugin_proto.Plugin{
-      {
-        Processors: []*processor_proto.Processor{
-          {
-            Name:                "bash",
-            StartProcessorTemplate: "{{.Name}}",
-          },
-          {
-            Name:                "cmd",
-            StartProcessorTemplate: "{{.Name}}",
-          },
-        },
-      },
-    },
-  },
+	Context: &context_proto.Context{
+		Plugins: []*plugin_proto.Plugin{
+			{
+				Processors: []*processor_proto.Processor{
+					{
+						Name:                   "bash",
+						StartProcessorTemplate: "{{.Name}}",
+					},
+					{
+						Name:                   "cmd",
+						StartProcessorTemplate: "{{.Name}}",
+					},
+				},
+			},
+		},
+	},
 }
 
 // Mocked processor queries
-var processorQueryTests = []*processor.ProcessorQuery{
+var processorQueryTests = []*ProcessorQuery{
 	{
-    ProcessorQuery: &processor_proto.ProcessorQuery{
-      Name: &[]string{"bash"}[0],
-    },
+		ProcessorQuery: &scheduling_proto.ProcessorQuery{
+			Name:    &[]string{"bash"}[0],
+			Context: contextTest.Context,
+		},
 	},
 	{
-    ProcessorQuery: &processor_proto.ProcessorQuery{
-      Name:    &[]string{"foo"}[0],
-      Version: &[]string{"2.3"}[0],
-    },
+		ProcessorQuery: &scheduling_proto.ProcessorQuery{
+			Name:    &[]string{"foo"}[0],
+			Version: &[]string{"2.3"}[0],
+		},
 	},
 }
 
@@ -52,10 +54,10 @@ var processorQueryTests = []*processor.ProcessorQuery{
 var runningProcessorPool = map[string]*RegisteredProcessor{
 	"": {
 		Processor: &processor.Processor{
-      Processor: &processor_proto.Processor{
-        Name:    "foo",
-        Version: "2.3",
-      },
+			Processor: &processor_proto.Processor{
+				Name:    "foo",
+				Version: "2.3",
+			},
 		},
 	},
 }
@@ -63,31 +65,33 @@ var runningProcessorPool = map[string]*RegisteredProcessor{
 // Mocked scheduler that will falsely register the processors
 func mockedScheduler(stop chan bool) {
 	for {
-    select {
-    case <- stop:
-        return
-    default:
-      pendingProcessors := maps.Values(processor.ProcessorQueue())
-      for _, pendingProcessor := range pendingProcessors {
-        registerProcessor(pendingProcessor, "")
-      }
-      time.Sleep(100 * time.Millisecond)
-    }
+		select {
+		case <-stop:
+			return
+		default:
+			pendingProcessors := maps.Values(processor.ProcessorQueue())
+			for _, pendingProcessor := range pendingProcessors {
+				registerProcessor(pendingProcessor, "")
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 
 // Test the GetOrStartProcessor function
 func TestGetOrStartProcessor(t *testing.T) {
-  stopScheduler := make(chan bool)
+	stopScheduler := make(chan bool)
+	defer func() { stopScheduler <- true }()
 	go mockedScheduler(stopScheduler)
+
 	for processorId, runningProcessor := range runningProcessorPool {
-    processorPoolLock.Lock()
+		processorPoolLock.Lock()
 		ProcessorPool()[processorId] = runningProcessor
-    processorPoolLock.Unlock()
+		processorPoolLock.Unlock()
 	}
 
 	for _, processorQueryTest := range processorQueryTests {
-		_, err := GetOrStartProcessor(&contextTest, processorQueryTest)
+		_, err := GetOrStartProcessor(processorQueryTest)
 		if err != nil {
 			t.Errorf("An error occured while getting client from query %s: %s", processorQueryTest, err.Error())
 			return

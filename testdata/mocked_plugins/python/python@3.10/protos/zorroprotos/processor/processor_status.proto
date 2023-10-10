@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/processor";
+
+enum ProcessorStatus {
+  STARTING = 0;       // The program is starting
+  IDLE = 1;           // The program is running but not executing any commands
+  PROCESSING = 2;     // The program is running and executing commands
+  SHUTTING_DOWN = 3;  // The program received a shutting down command
+  SHUT_DOWN = 4;      // The program is now off
+  NOT_RESPONDING = 5; // No ping received from the processor
+}

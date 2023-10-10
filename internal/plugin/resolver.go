@@ -9,8 +9,8 @@ import (
 	"github.com/Acedyn/zorro-core/internal/config"
 	"github.com/Acedyn/zorro-core/internal/utils"
 
+	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	"github.com/life4/genesis/slices"
-  config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 )
 
 // Find all available plugin versions with the given name
@@ -217,7 +217,7 @@ func resolvePluginGraph(
 		})
 
 		if iterErr != nil {
-			utils.Logger().Debug(fmt.Sprintf("Skipping plugin versions: could not load plugin\n\t" + iterErr.Error()))
+			utils.Logger().Warn(fmt.Sprintf("Skipping plugin versions: could not load plugin\n\t" + iterErr.Error()))
 			continue
 		}
 

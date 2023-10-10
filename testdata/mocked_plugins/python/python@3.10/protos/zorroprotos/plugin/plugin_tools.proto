@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/plugin";
+
+// Where to look for tool declarations
+message PluginTools {
+  repeated string commands = 1;
+  repeated string actions = 2;
+  repeated string hooks = 3;
+  repeated string widgets = 4;
+}
+

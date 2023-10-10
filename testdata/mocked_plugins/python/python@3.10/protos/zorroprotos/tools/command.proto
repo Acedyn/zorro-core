@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/tools";
+
+import "zorroprotos/tools/tool.proto";
+import "zorroprotos/processor/processor_query.proto";
+
+// A command is a task that will be sent to a processor to be executed.
+message Command {
+  // All tools are composed of this field that contains required infos
+  ToolBase base = 1;
+  // Query to select a running processor or to start a new one
+  ProcessorQuery processor_query = 2;
+}

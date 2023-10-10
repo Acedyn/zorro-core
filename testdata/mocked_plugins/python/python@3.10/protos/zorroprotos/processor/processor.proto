@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/processor";
+
+import "zorroprotos/processor/processor_status.proto";
+
+// Processors are responsible for executing commands
+message Processor {
+  // The Id is used to differentiate processor instances
+  string id = 1;
+  // The name of the executable
+  string name = 2;
+  // Used to differentiate two same processors with a different version
+  string version = 3;
+  // User friently version of the name without all its contraints
+  string label = 4;
+  // Paths where we should look for the executable
+  repeated string paths = 5;
+  // Defines if this processor can be used as a substitute for other processors
+  repeated string subsets = 6;
+  // Template to run the program without the processor running
+  string start_program_template = 7;
+  // Template to run the program with the processor running
+  string start_processor_template = 8;
+  // Help knowing at which state is the processor
+  ProcessorStatus status = 9;
+  // Extra data used mainly for filters
+  map<string, string> metadata = 10;
+  // Used to list the output logs
+  map<int32, string> stdout = 11;
+  map<int32, string> stderr = 12;
+}

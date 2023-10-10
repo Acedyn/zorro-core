@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/plugin";
+
+// Modifications for a environment variabme by a plugins
+message PluginEnv {
+  // Paths to append to the existing paths for path environment variable
+  repeated string append = 1;
+  // Paths to prepend to the existing paths for path environment variable
+  repeated string prepend = 2;
+  // For regular environment variable, the value to set
+  optional string set = 3;
+}
+

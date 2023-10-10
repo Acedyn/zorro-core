@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/processor";
+
+// Filters used to select a processor from a processor pool
+message ProcessorQuery {
+  // Match the processor by name or specify which processor to start
+  optional string name = 1;
+  // Match the processor by version or specify which version to start
+  optional string version = 2;
+  // Match the processor by id
+  optional string id = 4;
+  // Match the processor by metadata or used as argument to start new processor
+  map<string, string> metadata = 5;
+}

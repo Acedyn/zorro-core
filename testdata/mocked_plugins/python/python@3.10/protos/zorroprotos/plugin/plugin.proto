@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/plugin";
+
+import "zorroprotos/processor/processor.proto";
+import "zorroprotos/plugin/plugin_env.proto";
+import "zorroprotos/plugin/plugin_tools.proto";
+
+// Plugins register a set of tools, environment variables and processors.
+// A set of tools will define what interactions are available or not.
+message Plugin {
+  // The name should be unique and be as simple as possible
+  string name = 1;
+  // The version is composed of multiple subversions separated with a dot
+  string version = 2;
+  // User friently version of the name without all its contraints
+  string label = 3;
+  // The path to the plugin definition
+  string path = 4;
+  // A list of plugin request that needs to be resolved for this plugin
+  repeated string require = 5;
+  // Each plugins will alter the environment generated
+  map<string, PluginEnv> env = 6;
+  // Each plugins will alter the environment generated
+  PluginTools tools = 7;
+  // List of processors to register as available processors to launch
+  repeated Processor processors = 8;
+}

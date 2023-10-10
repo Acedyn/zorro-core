@@ -92,6 +92,9 @@ func ParseVersionQuery(query string) *VersionQuery {
 
 // Test if the given plugin satisfies the query
 func (versionQuery *VersionQuery) Match(plugin *Plugin) bool {
+	if versionQuery.Version == "" {
+		return true
+	}
 	versionComparison := CompareVersions(plugin.GetVersion(), versionQuery.Version)
 
 	if versionComparison == VersionOperator_EQUAL {

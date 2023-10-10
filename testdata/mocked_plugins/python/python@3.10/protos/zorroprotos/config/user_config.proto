@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/config";
+
+// List all the available languages
+enum Language {
+  English = 0;
+  French = 1;
+  Spanish = 2;
+  Dutch = 3;
+}
+
+// Config related to the user's preferences
+message UserConfig {
+  Language language = 1;
+}

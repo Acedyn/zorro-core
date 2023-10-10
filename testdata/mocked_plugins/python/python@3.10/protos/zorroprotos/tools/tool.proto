@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package zorro;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/tools";
+
+import "zorroprotos/tools/socket.proto";
+
+// List of all the possible tools
+enum ToolType {
+  COMMAND = 0;
+  ACTION = 1;
+  WIDGET = 2;
+  HOOK = 3;
+}
+
+// Various states a tool can have, they are ordered by importance
+enum ToolStatus {
+  INITIALIZING = 0;
+  INITIALIZED = 1;
+  RUNNING = 2;
+  PAUSED = 3;
+  ERROR = 4;
+  INVALID = 5;
+}
+
+// A tool expose functionalities to the user. There is multiple types of tools,
+// like actions, or commands. Almost all the fields are optional because we
+// might receive tool patches
+message ToolBase {
+  // The Id is the only required field since it is used to differentiate tools
+  string id = 1;
+  // The name should be unique and be as simple as possible
+  optional string name = 2;
+  // This helps defining the type of tool definition to use when
+  // deserializing the protobuf
+  optional ToolType type = 3;
+  // User friently version of the name without all its contraints
+  optional string label = 4;
+  // The status is only used for user feedback
+  optional ToolStatus status = 5;
+  // Inputs and outputs
+  map<string, Socket> inputs = 6;
+  map<string, Socket> outputs = 7;
+  // The tooltip is only for the user
+  optional string tooltip = 8;
+  // Logs can be heavy, only the last ones are usually sent
+  map<int32, string> logs = 9;
+}
+
+// An abstract tool representation
+message Tool {
+  // All tools are composed of this field that contains required infos
+  ToolBase base = 1;
+}

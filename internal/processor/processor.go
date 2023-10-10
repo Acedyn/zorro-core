@@ -7,13 +7,13 @@ import (
 	"strings"
 	"text/template"
 
+	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 	"github.com/life4/genesis/maps"
-  processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 )
 
 // Wrapped processor with methods attached
 type Processor struct {
-  *processor_proto.Processor
+	*processor_proto.Processor
 }
 
 // Start the client into a running client
@@ -23,7 +23,7 @@ func (processor *Processor) Start(
 ) (*PendingProcessor, error) {
 	registration := make(chan error)
 	pendingProcessor := &PendingProcessor{
-		Processor:       processor,
+		Processor:    processor,
 		Registration: registration,
 	}
 	startingStatus := processor_proto.ProcessorStatus_STARTING
@@ -34,7 +34,7 @@ func (processor *Processor) Start(
 	template, err := template.New(processor.GetName()).Parse(pendingProcessor.GetStartProcessorTemplate())
 	if err != nil {
 		return nil, fmt.Errorf(
-			"could not run client %s: Invalid launch template %w",
+			"could not run processor (%s): Invalid launch template %w",
 			pendingProcessor.GetName(),
 			err,
 		)
@@ -46,26 +46,32 @@ func (processor *Processor) Start(
 		Name     string
 		Label    string
 		Version  string
+		Id       string
 		Metadata map[string]string
 	}{
 		Name:     pendingProcessor.GetName(),
 		Label:    pendingProcessor.GetLabel(),
 		Version:  pendingProcessor.GetVersion(),
+		Id:       pendingProcessor.GetId(),
 		Metadata: pendingProcessor.GetMetadata(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not run client %s: Templating error %w", pendingProcessor.GetName(), err)
+		return nil, fmt.Errorf("could not run processor (%s): Templating error %w", pendingProcessor.GetName(), err)
 	}
 
 	// Build the subprocess's env with the context's environment variables
 	splittedCommand := strings.Split(runCommand.String(), " ")
-	clientCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
-	clientCommand.Env = environ
+	processorCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
+	processorCommand.Env = environ
+
+	var stdBuffer bytes.Buffer
+	processorCommand.Stdout = &stdBuffer
+	processorCommand.Stderr = &stdBuffer
 
 	// Start the subprocess
-	err = clientCommand.Start()
+	err = processorCommand.Start()
 	if err != nil {
-		return nil, fmt.Errorf("an error occured while starting process for processor %s: %w", processor, err)
+		return nil, fmt.Errorf("an error occured while starting process for processor (%s) with command %s: %w", processor, splittedCommand, err)
 	}
 
 	// Register the new client into the client queue and wait for it to be registered
@@ -73,7 +79,22 @@ func (processor *Processor) Start(
 	ProcessorQueue()[pendingProcessor.GetId()] = pendingProcessor
 	processorQueueLock.Unlock()
 
-	return pendingProcessor, <-registration
+	// Wait for the command to end so we can get the output code
+	commandResult := make(chan error)
+	go func() {
+		commandResult <- processorCommand.Wait()
+	}()
+
+	// We wait for either the processor to be registered or the command to error out
+	err = nil
+	select {
+	case registrationOutput := <-registration:
+		err = registrationOutput
+	case commandOutput := <-commandResult:
+		err = commandOutput
+	}
+
+	return pendingProcessor, err
 }
 
 // Update the processor with a patch

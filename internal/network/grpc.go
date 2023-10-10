@@ -10,7 +10,7 @@ import (
 
 var (
 	grpcServer *grpc.Server
-	once   sync.Once
+	once       sync.Once
 )
 
 // Getter for the grpc server singleton
@@ -28,8 +28,8 @@ func ServeGrpc(host string, port int) error {
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
-  if err = GrpcServer().Serve(listener); err != nil {
+	if err = GrpcServer().Serve(listener); err != nil {
 		return fmt.Errorf("failed to server grpc: %w", err)
-  }
-  return nil
+	}
+	return nil
 }
