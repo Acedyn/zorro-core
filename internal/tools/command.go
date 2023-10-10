@@ -6,36 +6,36 @@ import (
 
 	"github.com/Acedyn/zorro-core/internal/context"
 
-  tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
+	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
 
 var (
-	commandQueue chan *CommandHandle
+	commandQueue chan *CommandQuery
 	once         sync.Once
 )
 
 // Wrapped command with methods attached
 type Command struct {
-  *tools_proto.Command
+	*tools_proto.Command
+}
+
+// Get the wrapped base with all its methods
+func (command *Command) GetBase() *ToolBase {
+	return &ToolBase{ToolBase: command.Command.GetBase()}
 }
 
 // Started command, waiting to be sheduled
-type CommandHandle struct {
+type CommandQuery struct {
 	Command *Command
 	Result  chan error
 	Context *context.Context
 }
 
-// Get the wrapped base with all its methods
-func (command *Command) GetBase() *ToolBase {
-  return &ToolBase{ToolBase: command.Command.GetBase()}
-}
-
 // Getter for the commands queue singleton which holds the queue
 // of command waiting to be scheduled
-func CommandQueue() chan *CommandHandle {
+func CommandQueue() chan *CommandQuery {
 	once.Do(func() {
-		commandQueue = make(chan *CommandHandle)
+		commandQueue = make(chan *CommandQuery)
 	})
 
 	return commandQueue
@@ -53,7 +53,7 @@ func (command *Command) Traverse(task func(TraversableTool) error) error {
 // The execution of the commands is handled by the scheduler, and processed by the clients
 func (command *Command) Execute(c *context.Context) error {
 	result := make(chan error)
-	CommandQueue() <- &CommandHandle{
+	CommandQueue() <- &CommandQuery{
 		Command: command,
 		Result:  result,
 		Context: c,

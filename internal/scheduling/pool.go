@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/processor"
 	"github.com/Acedyn/zorro-core/internal/tools"
 
-	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
+	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 )
 
 // Registered processors are ready to receive command requests
@@ -55,13 +54,13 @@ func registerProcessor(pendingProcessor *processor.PendingProcessor, host string
 		ProcessorPool()[pendingProcessor.GetId()] = registeredProcessor
 	}
 
-  processor.UnQueueProcessor(pendingProcessor)
+	processor.UnQueueProcessor(pendingProcessor)
 	pendingProcessor.Registration <- nil
 	return registeredProcessor
 }
 
 // Look among the already registered clients and return the first matching client
-func findRegisteredProcessor(query *processor.ProcessorQuery) *RegisteredProcessor {
+func findRegisteredProcessor(query *ProcessorQuery) *RegisteredProcessor {
 	processorPoolLock.Lock()
 	defer processorPoolLock.Unlock()
 
@@ -81,22 +80,22 @@ func findRegisteredProcessor(query *processor.ProcessorQuery) *RegisteredProcess
 }
 
 // Get an already running processor or start a new one from the query
-func GetOrStartProcessor(c *context.Context, query *processor.ProcessorQuery) (*RegisteredProcessor, error) {
+func GetOrStartProcessor(query *ProcessorQuery) (*RegisteredProcessor, error) {
 	// First find a potential running processors that matches the query
 	if registeredClient := findRegisteredProcessor(query); registeredClient != nil {
 		return registeredClient, nil
 	}
 
 	// If no running processors matches the query, try to start a new one
-	for _, availableProcessor := range c.AvailableProcessors() {
+	for _, availableProcessor := range query.GetContext().AvailableProcessors() {
 		if availableProcessor.GetName() == query.GetName() {
-			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), c.Environ(true))
+			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), query.GetContext().Environ(true))
 			if err != nil {
-				return nil, fmt.Errorf("could not start new client %s: %w", availableProcessor, err)
+				return nil, fmt.Errorf("could not start new client (%s): %w", availableProcessor, err)
 			}
 			// The client should now be registered
-			registeredProcessor := findRegisteredProcessor(&processor.ProcessorQuery{
-				ProcessorQuery: &processor_proto.ProcessorQuery{
+			registeredProcessor := findRegisteredProcessor(&ProcessorQuery{
+				ProcessorQuery: &scheduling_proto.ProcessorQuery{
 					Id: &pendingProcessor.Id,
 				},
 			})

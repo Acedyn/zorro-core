@@ -23,7 +23,7 @@ func TestGetAllPluginVersion(t *testing.T) {
 		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "test", "mocked_plugins")
+	fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins")
 
 	for name, expectedPluginCount := range getAllPluginVersionsTests {
 		plugins := FindPluginVersions(name, &config_proto.PluginConfig{
@@ -55,7 +55,7 @@ func TestPluginResolution(t *testing.T) {
 		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "test", "mocked_plugins")
+	fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins")
 
 	for pluginQuery, expectedVersions := range pluginResolutionTests {
 		query := strings.Split(pluginQuery, " ")

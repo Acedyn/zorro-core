@@ -11,16 +11,16 @@ import (
 	"github.com/Acedyn/zorro-core/internal/config"
 	"github.com/Acedyn/zorro-core/internal/processor"
 
-	"github.com/life4/genesis/slices"
-	"golang.org/x/text/cases"
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
+	"github.com/life4/genesis/slices"
+	"golang.org/x/text/cases"
 )
 
 const (
-  PLUGIN_DEFINITION_NAME = "zorro-plugin"
-  VERSION_SPERARATOR = "@"
-  DEFAULT_VERSION = "v0.0.0"
+	PLUGIN_DEFINITION_NAME = "zorro-plugin"
+	VERSION_SPERARATOR     = "@"
+	DEFAULT_VERSION        = "v0.0.0"
 )
 
 // Wrapped plugin with methods attached
@@ -29,9 +29,9 @@ type Plugin struct {
 }
 
 func (plugin *Plugin) GetProcessors() []*processor.Processor {
-  return slices.Map(plugin.Plugin.GetProcessors(), func (p *processor_proto.Processor) *processor.Processor {
-    return &processor.Processor{Processor: p}
-  })
+	return slices.Map(plugin.Plugin.GetProcessors(), func(p *processor_proto.Processor) *processor.Processor {
+		return &processor.Processor{Processor: p}
+	})
 }
 
 // Initialize the plugin's fields by expanding paths and initializing
@@ -43,16 +43,29 @@ func (plugin *Plugin) InitDefaults() {
 		plugin.Label = caser.String(strings.ReplaceAll(plugin.GetName(), "_", " "))
 	}
 
-	// Expand the relative paths
-	pluginTools := [][]string{
-		plugin.Tools.Commands,
-		plugin.Tools.Actions,
-		plugin.Tools.Hooks,
-		plugin.Tools.Widgets,
+	// Make sure structs are not nil
+	if plugin.Tools == nil {
+		plugin.Tools = &plugin_proto.PluginTools{}
 	}
-	for _, tool := range pluginTools {
-		for index, tool_path := range tool {
-			tool[index] = plugin.resolveRelativePath(tool_path)
+	if plugin.Env == nil {
+		plugin.Env = map[string]*plugin_proto.PluginEnv{}
+	}
+
+	// Expand the relative paths
+	fieldsToExpand := [][]string{
+		plugin.GetTools().Commands,
+		plugin.GetTools().Actions,
+		plugin.GetTools().Hooks,
+		plugin.GetTools().Widgets,
+	}
+	for _, env := range plugin.GetEnv() {
+		fieldsToExpand = append(fieldsToExpand, env.Prepend)
+		fieldsToExpand = append(fieldsToExpand, env.Append)
+	}
+
+	for _, pathsToExpand := range fieldsToExpand {
+		for index, pathToExpand := range pathsToExpand {
+			pathsToExpand[index] = plugin.resolveRelativePath(pathToExpand)
 		}
 	}
 
@@ -104,7 +117,7 @@ func (plugin *Plugin) Load() error {
 func (plugin *Plugin) LoadJson(config []byte) error {
 	err := json.Unmarshal(config, plugin)
 	if err != nil {
-		return fmt.Errorf("invalid plugin json config (%s): %w", plugin.Name, err)
+		return fmt.Errorf("invalid plugin json config (%s): %w", plugin.GetPath(), err)
 	}
 
 	plugin.InitDefaults()

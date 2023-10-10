@@ -10,30 +10,30 @@ import (
 
 // Mocked plugin to test the InitDefaults methods
 var pluginInitTest = Plugin{
-  Plugin: &plugin_proto.Plugin{
-    Name: "foo_bar",
-    Path: "/foo/bar/zorro-plugin.json",
-    Tools: &plugin_proto.PluginTools{
-      Commands: []string{"./commands", "./foo/commands"},
-    },
+	Plugin: &plugin_proto.Plugin{
+		Name: "foo_bar",
+		Path: "/foo/bar/zorro-plugin.json",
+		Tools: &plugin_proto.PluginTools{
+			Commands: []string{"./commands", "./foo/commands"},
+		},
 	},
 }
 
 // Test the InitDefaults methods
 func TestPluginInit(t *testing.T) {
-  pluginInitTest.InitDefaults()
+	pluginInitTest.InitDefaults()
 
-  if pluginInitTest.Label != "Foo Bar" {
-    t.Errorf("invalid plugin label initialized: %s", pluginInitTest.Label)
-  }
+	if pluginInitTest.Label != "Foo Bar" {
+		t.Errorf("invalid plugin label initialized: %s", pluginInitTest.Label)
+	}
 
-  if pluginInitTest.Tools.Commands[0] != filepath.Join("/foo/bar/commands") {
-    t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[0])
-  }
+	if pluginInitTest.Tools.Commands[0] != filepath.Join("/foo/bar/commands") {
+		t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[0])
+	}
 
-  if pluginInitTest.Tools.Commands[1] != filepath.Join("/foo/bar/foo/commands") {
-    t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[1])
-  }
+	if pluginInitTest.Tools.Commands[1] != filepath.Join("/foo/bar/foo/commands") {
+		t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[1])
+	}
 }
 
 // Test the loading of a bare plugin
@@ -86,7 +86,7 @@ func TestLoadPluginFromFile(t *testing.T) {
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 
 	for path, expectedPlugin := range loadPluginFromFileTests {
-		fullPath := filepath.Join(cwdPath, "test", "mocked_plugins", path)
+		fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins", path)
 		loadedPlugin, err := GetPluginFromFile(fullPath)
 		if err != nil {
 			t.Errorf("an error occured while loading the plugin at path %s\n\t%s", path, err)

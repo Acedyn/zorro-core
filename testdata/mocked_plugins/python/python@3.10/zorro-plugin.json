@@ -1,0 +1,17 @@
+{
+  "env": {
+    "PATH": {
+      "append": ["./bin"]
+    },
+    "PYTHONPATH": {
+      "append": [".", "./protos/"]
+    }
+  },
+  "processors": [
+    {
+      "name": "python",
+      "version": "3.10",
+      "start_processor_template": "{{.Name}} -m zorro_python.processors.python_processor -i {{.Id}}"
+    }
+  ]
+}
