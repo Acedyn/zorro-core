@@ -25,11 +25,11 @@ func getFreePort() (int, error) {
 
 // Test Starting the grpc server
 func TestServeGrpc(t *testing.T) {
-  host := "localhost"
-  port, err := getFreePort()
-  if err != nil {
-    t.Errorf("Could not get free port: %s", err.Error())
-  }
+	host := "localhost"
+	port, err := getFreePort()
+	if err != nil {
+		t.Errorf("Could not get free port: %s", err.Error())
+	}
 
 	// Start the server in its own goroutine
 	go func() {
@@ -37,13 +37,14 @@ func TestServeGrpc(t *testing.T) {
 			t.Errorf("An error occured while serving GRPC: %s", err.Error())
 		}
 	}()
-  defer GrpcServer().GracefulStop()
+	grpcServer, _ := GrpcServer()
+	defer grpcServer.GracefulStop()
 
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", host, port), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-    t.Errorf("Could not start GRPC client: %s", err.Error())
+		t.Errorf("Could not start GRPC client: %s", err.Error())
 	}
-  if err = conn.Close(); err != nil {
-    t.Errorf("Could not stop GRPC client: %s", err.Error())
-  }
+	if err = conn.Close(); err != nil {
+		t.Errorf("Could not stop GRPC client: %s", err.Error())
+	}
 }

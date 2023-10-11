@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/Acedyn/zorro-core/internal/network"
 	"github.com/Acedyn/zorro-core/internal/plugin"
 	"github.com/Acedyn/zorro-core/internal/processor"
 
@@ -68,6 +70,38 @@ func (context *Context) Environ(includeCurrent bool) []string {
 				environ[key] = pluginEnviron.GetSet()
 			}
 		}
+	}
+
+	// List of the loaded plugins
+	environ["ZORRO_PLUGINS"] = strings.Join(slices.Map(context.GetPlugins(), func(plugin *plugin.Plugin) string {
+		return plugin.GetPath()
+	}), string(filepath.ListSeparator))
+
+	// List of the available actions
+	environ["ZORRO_ACTIONS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
+		return append(acc, plugin.GetTools().GetActions()...)
+	}), string(filepath.ListSeparator))
+
+	// List of the available hooks
+	environ["ZORRO_HOOKS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
+		return append(acc, plugin.GetTools().GetHooks()...)
+	}), string(filepath.ListSeparator))
+
+	// List of the available widgets
+	environ["ZORRO_WIDGETS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
+		return append(acc, plugin.GetTools().GetWidgets()...)
+	}), string(filepath.ListSeparator))
+
+	// List of the available commands
+	environ["ZORRO_COMMANDS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
+		return append(acc, plugin.GetTools().GetCommands()...)
+	}), string(filepath.ListSeparator))
+
+	// Port and host of the grpc server
+	_, grpcStatus := network.GrpcServer()
+	if grpcStatus.IsRunning {
+		environ["ZORRO_GRPC_CORE_PORT"] = strconv.Itoa(grpcStatus.Port)
+		environ["ZORRO_GRPC_CORE_HOST"] = grpcStatus.Host
 	}
 
 	// Reformat the environment variables to the "key=value" slice format

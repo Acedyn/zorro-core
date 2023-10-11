@@ -90,15 +90,13 @@ def parse_cli():
     parser.add_argument(
         "--zorro-core-host",
         type=str,
-        default=os.getenv("ZORRO_CORE_HOST", "127.0.0.1"),
+        default=os.getenv("ZORRO_GRPC_CORE_HOST", "127.0.0.1"),
         help="The host of the zorro core server to connect to",
     )
     parser.add_argument(
         "--zorro-core-port",
         type=int,
-        default=os.getenv("ZORRO_CORE_PORT")
-        if os.getenv("ZORRO_CORE_PORT", "").isdigit()
-        else 9865,
+        default=os.getenv("ZORRO_GRPC_CORE_PORT", "9865"),
         help="The port of the zorro core server to connect to",
     )
     parser.add_argument(
