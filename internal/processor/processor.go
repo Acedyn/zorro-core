@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"text/template"
 
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
+	"github.com/hoisie/mustache"
 	"github.com/life4/genesis/maps"
 )
 
@@ -20,6 +20,7 @@ type Processor struct {
 func (processor *Processor) Start(
 	metadata map[string]string,
 	environ []string,
+	commandPaths []string,
 ) (*PendingProcessor, error) {
 	registration := make(chan error)
 	pendingProcessor := &PendingProcessor{
@@ -28,39 +29,16 @@ func (processor *Processor) Start(
 	}
 	startingStatus := processor_proto.ProcessorStatus_STARTING
 	pendingProcessor.Status = startingStatus
-	pendingProcessor.Metadata = maps.Merge(pendingProcessor.GetMetadata(), metadata)
-
-	// Build the command template
-	template, err := template.New(processor.GetName()).Parse(pendingProcessor.GetStartProcessorTemplate())
-	if err != nil {
-		return nil, fmt.Errorf(
-			"could not run processor (%s): Invalid launch template %w",
-			pendingProcessor.GetName(),
-			err,
-		)
-	}
+	pendingProcessor.Metadata = maps.Merge(processor.GetMetadata(), metadata)
 
 	// Apply the metadata and the name on the template
-	runCommand := &bytes.Buffer{}
-	err = template.Execute(runCommand, struct {
-		Name     string
-		Label    string
-		Version  string
-		Id       string
-		Metadata map[string]string
-	}{
-		Name:     pendingProcessor.GetName(),
-		Label:    pendingProcessor.GetLabel(),
-		Version:  pendingProcessor.GetVersion(),
-		Id:       pendingProcessor.GetId(),
-		Metadata: pendingProcessor.GetMetadata(),
-	})
+	runCommand, err := processor.buildCommand(commandPaths)
 	if err != nil {
-		return nil, fmt.Errorf("could not run processor (%s): Templating error %w", pendingProcessor.GetName(), err)
+		return nil, fmt.Errorf("could not run processor (%s): %w", processor.GetName(), err)
 	}
 
 	// Build the subprocess's env with the context's environment variables
-	splittedCommand := strings.Split(runCommand.String(), " ")
+	splittedCommand := strings.Split(runCommand, " ")
 	processorCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
 	processorCommand.Env = environ
 
@@ -95,6 +73,28 @@ func (processor *Processor) Start(
 	}
 
 	return pendingProcessor, err
+}
+
+// Build the command used to start the processor
+func (processor *Processor) buildCommand(commandsPaths []string) (string, error) {
+	// Build the command template
+	template, err := mustache.ParseString(processor.GetStartProcessorTemplate())
+	if err != nil {
+		return "", fmt.Errorf(
+			"could not parse launch template %w",
+			err,
+		)
+	}
+
+	// Render the template to the actual string
+	return template.Render(map[string]any{
+		"name":     processor.GetName(),
+		"label":    processor.GetLabel(),
+		"version":  processor.GetVersion(),
+		"id":       processor.GetId(),
+		"metadata": processor.GetMetadata(),
+		"commands": commandsPaths,
+	}), nil
 }
 
 // Update the processor with a patch

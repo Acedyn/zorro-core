@@ -22,11 +22,11 @@ var contextTest = context.Context{
 				Processors: []*processor_proto.Processor{
 					{
 						Name:                   "bash",
-						StartProcessorTemplate: "{{.Name}}",
+						StartProcessorTemplate: "{{name}}",
 					},
 					{
 						Name:                   "cmd",
-						StartProcessorTemplate: "{{.Name}}",
+						StartProcessorTemplate: "{{name}}",
 					},
 				},
 			},

@@ -91,7 +91,7 @@ func GetOrStartProcessor(query *ProcessorQuery) (*RegisteredProcessor, error) {
 	// If no running processors matches the query, try to start a new one
 	for _, availableProcessor := range query.GetContext().AvailableProcessors() {
 		if availableProcessor.GetName() == query.GetName() {
-			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), query.GetContext().Environ(true))
+			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), query.GetContext().Environ(true), query.GetContext().AvailableCommandPaths(availableProcessor))
 			if err != nil {
 				return nil, fmt.Errorf("could not start new processor (%s): %w", availableProcessor, err)
 			}

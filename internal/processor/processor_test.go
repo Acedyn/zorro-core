@@ -13,14 +13,14 @@ import (
 var startClientTestWindows = Processor{
 	Processor: &processor_proto.Processor{
 		Name:                   "cmd",
-		StartProcessorTemplate: "{{.Name}}",
+		StartProcessorTemplate: "{{name}}",
 	},
 }
 
 var startClientTestLinux = Processor{
 	Processor: &processor_proto.Processor{
 		Name:                   "bash",
-		StartProcessorTemplate: "{{.Name}}",
+		StartProcessorTemplate: "{{name}}",
 	},
 }
 
@@ -59,7 +59,7 @@ func TestStartProcessor(t *testing.T) {
 		startProcessorTest = &startClientTestLinux
 	}
 
-	_, err := startProcessorTest.Start(map[string]string{}, []string{})
+	_, err := startProcessorTest.Start(map[string]string{}, []string{}, []string{})
 	if err != nil {
 		t.Errorf("An error occured while running client %s: %s", startProcessorTest, err.Error())
 		return

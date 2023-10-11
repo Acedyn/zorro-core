@@ -2,12 +2,9 @@ package context
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	"github.com/Acedyn/zorro-core/internal/network"
 	"github.com/Acedyn/zorro-core/internal/plugin"
 	"github.com/Acedyn/zorro-core/internal/processor"
 
@@ -33,43 +30,10 @@ func (context *Context) GetPlugins() []*plugin.Plugin {
 // in the form "key=value".
 func (context *Context) Environ(includeCurrent bool) []string {
 	environ := map[string]string{}
-	// Convert the current environment to a map rather than
-	// a "key=value" slice
-	if includeCurrent {
-		for _, environVariable := range os.Environ() {
-			if splittedEnviron := strings.Split(environVariable, "="); len(splittedEnviron) == 2 {
-				environ[splittedEnviron[0]] = splittedEnviron[1]
-			}
-		}
-	}
 
-	// Each plugins brings its own set of environment variable
-	// modifications
-	for _, plugin := range context.GetPlugins() {
-		for key, pluginEnviron := range plugin.GetEnv() {
-			// Prepend means insert at the beginning of the current value
-			for _, valuePrepend := range pluginEnviron.GetPrepend() {
-				if current, ok := environ[key]; ok {
-					current = strings.Trim(current, string(filepath.ListSeparator))
-					environ[key] = strings.Join([]string{valuePrepend, current}, string(filepath.ListSeparator))
-				} else {
-					environ[key] = valuePrepend
-				}
-			}
-			// Append means add at the end of the current value
-			for _, valueAppend := range pluginEnviron.GetAppend() {
-				if current, ok := environ[key]; ok {
-					current = strings.Trim(current, string(filepath.ListSeparator))
-					environ[key] = strings.Join([]string{current, valueAppend}, string(filepath.ListSeparator))
-				} else {
-					environ[key] = valueAppend
-				}
-			}
-			// Set will override the current value
-			if pluginEnviron.Set != nil {
-				environ[key] = pluginEnviron.GetSet()
-			}
-		}
+	// Add the current environment
+	if includeCurrent {
+		environ = buildCurrentEnvironment(environ)
 	}
 
 	// List of the loaded plugins
@@ -77,44 +41,14 @@ func (context *Context) Environ(includeCurrent bool) []string {
 		return plugin.GetPath()
 	}), string(filepath.ListSeparator))
 
-	// List of the available actions
-	maps.IMerge(environ, concatToolsDeclarations(
-		"ZORRO_ACTIONS",
-		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
-			return append(acc, plugin.Tools.GetActions()...)
-		}),
-	))
+	// Each plugins brings its own set of environment variable modifications
+	environ = buildPluginsEnvironment(environ, context.GetPlugins())
 
-	// List of the available hooks
-	maps.IMerge(environ, concatToolsDeclarations(
-		"ZORRO_HOOKS",
-		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
-			return append(acc, plugin.Tools.GetHooks()...)
-		}),
-	))
-
-	// List of the available widgets
-	maps.IMerge(environ, concatToolsDeclarations(
-		"ZORRO_WIDGETS",
-		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
-			return append(acc, plugin.Tools.GetWidgets()...)
-		}),
-	))
-
-	// List of the available commands
-	maps.IMerge(environ, concatToolsDeclarations(
-		"ZORRO_COMMANDS",
-		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
-			return append(acc, plugin.Tools.GetWidgets()...)
-		}),
-	))
+	// List the available tools grouped by category
+	environ = buildToolsEnvironment(environ, context.GetPlugins())
 
 	// Port and host of the grpc server
-	_, grpcStatus := network.GrpcServer()
-	if grpcStatus.IsRunning {
-		environ["ZORRO_GRPC_CORE_PORT"] = strconv.Itoa(grpcStatus.Port)
-		environ["ZORRO_GRPC_CORE_HOST"] = grpcStatus.Host
-	}
+	environ = buildGrpcEnvironment(environ)
 
 	// Reformat the environment variables to the "key=value" slice format
 	return slices.Map(maps.Keys(environ), func(el string) string {
@@ -122,20 +56,20 @@ func (context *Context) Environ(includeCurrent bool) []string {
 	})
 }
 
-// List all the tools and groupd them by category
-func concatToolsDeclarations(prefix string, toolsDeclarations []*plugin_proto.ToolsDeclaration) map[string]string {
-	concatenatedDeclarations := map[string]string{}
-	for _, toolsDeclaration := range toolsDeclarations {
-		currentTools, ok := concatenatedDeclarations[prefix+":"+toolsDeclaration.GetCategory()]
-		if !ok {
-			currentTools = toolsDeclaration.GetPath()
-		} else {
-			currentTools = strings.Join([]string{currentTools, toolsDeclaration.GetPath()}, string(filepath.ListSeparator))
+// Flatten list of all the commands present in the selected plugins that can be executed by the given processor
+func (context *Context) AvailableCommandPaths(processor *processor.Processor) []string {
+	processorSubsets := append(processor.GetSubsets(), processor.GetName())
+	availableCommands := []string{}
+
+	for _, plugin := range context.GetPlugins() {
+		for _, commandDeclaration := range plugin.GetTools().GetCommands() {
+			if slices.Contains(processorSubsets, commandDeclaration.GetCategory()) {
+				availableCommands = append(availableCommands, commandDeclaration.GetPath())
+			}
 		}
-		concatenatedDeclarations[prefix+":"+toolsDeclaration.GetCategory()] = currentTools
 	}
 
-	return concatenatedDeclarations
+	return availableCommands
 }
 
 // Flatten list of all the processors present in the selected plugins
