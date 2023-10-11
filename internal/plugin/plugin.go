@@ -51,13 +51,8 @@ func (plugin *Plugin) InitDefaults() {
 		plugin.Env = map[string]*plugin_proto.PluginEnv{}
 	}
 
-	// Expand the relative paths
-	fieldsToExpand := [][]string{
-		plugin.GetTools().Commands,
-		plugin.GetTools().Actions,
-		plugin.GetTools().Hooks,
-		plugin.GetTools().Widgets,
-	}
+	// Expand the relative paths of the env keys
+	fieldsToExpand := [][]string{}
 	for _, env := range plugin.GetEnv() {
 		fieldsToExpand = append(fieldsToExpand, env.Prepend)
 		fieldsToExpand = append(fieldsToExpand, env.Append)
@@ -66,6 +61,19 @@ func (plugin *Plugin) InitDefaults() {
 	for _, pathsToExpand := range fieldsToExpand {
 		for index, pathToExpand := range pathsToExpand {
 			pathsToExpand[index] = plugin.resolveRelativePath(pathToExpand)
+		}
+	}
+
+	// Expand the relative paths of the declared tools
+	pluginToolsDeclarations := [][]*plugin_proto.ToolsDeclaration{
+		plugin.GetTools().GetActions(),
+		plugin.GetTools().GetCommands(),
+		plugin.GetTools().GetHooks(),
+		plugin.GetTools().GetWidgets(),
+	}
+	for _, toolsDeclarations := range pluginToolsDeclarations {
+		for _, toolsDeclaration := range toolsDeclarations {
+			toolsDeclaration.Path = plugin.resolveRelativePath(toolsDeclaration.GetPath())
 		}
 	}
 
