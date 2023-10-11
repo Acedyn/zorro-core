@@ -1,7 +1,17 @@
 {
   "tools": {
-    "commands": ["./commands"],
-    "actions": ["./actions"]
+    "commands": [
+      {
+        "path": "./commands",
+        "category": "baz"
+      }
+    ],
+    "actions": [
+      {
+        "path": "./actions",
+        "category": "baz"
+      }
+    ]
   },
   "require": ["foo>=5.3"]
 }

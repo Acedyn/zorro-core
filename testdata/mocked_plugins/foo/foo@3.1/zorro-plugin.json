@@ -1,7 +1,16 @@
 {
   "label": "The foo plugin",
   "tools": {
-    "commands": ["./commands"],
-    "actions": ["./actions"]
+    "commands": [
+      {
+        "path": "./commands",
+        "category": "foo"
+      }
+    ],
+    "actions": [
+      {
+        "path": "./actions"
+      }
+    ]
   }
 }

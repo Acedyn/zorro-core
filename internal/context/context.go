@@ -78,24 +78,36 @@ func (context *Context) Environ(includeCurrent bool) []string {
 	}), string(filepath.ListSeparator))
 
 	// List of the available actions
-	environ["ZORRO_ACTIONS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
-		return append(acc, plugin.GetTools().GetActions()...)
-	}), string(filepath.ListSeparator))
+	maps.IMerge(environ, concatToolsDeclarations(
+		"ZORRO_ACTIONS",
+		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
+			return append(acc, plugin.Tools.GetActions()...)
+		}),
+	))
 
 	// List of the available hooks
-	environ["ZORRO_HOOKS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
-		return append(acc, plugin.GetTools().GetHooks()...)
-	}), string(filepath.ListSeparator))
+	maps.IMerge(environ, concatToolsDeclarations(
+		"ZORRO_HOOKS",
+		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
+			return append(acc, plugin.Tools.GetHooks()...)
+		}),
+	))
 
 	// List of the available widgets
-	environ["ZORRO_WIDGETS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
-		return append(acc, plugin.GetTools().GetWidgets()...)
-	}), string(filepath.ListSeparator))
+	maps.IMerge(environ, concatToolsDeclarations(
+		"ZORRO_WIDGETS",
+		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
+			return append(acc, plugin.Tools.GetWidgets()...)
+		}),
+	))
 
 	// List of the available commands
-	environ["ZORRO_COMMANDS"] = strings.Join(slices.Reduce(context.GetPlugins(), []string{}, func(plugin *plugin.Plugin, acc []string) []string {
-		return append(acc, plugin.GetTools().GetCommands()...)
-	}), string(filepath.ListSeparator))
+	maps.IMerge(environ, concatToolsDeclarations(
+		"ZORRO_COMMANDS",
+		slices.Reduce(context.GetPlugins(), []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
+			return append(acc, plugin.Tools.GetWidgets()...)
+		}),
+	))
 
 	// Port and host of the grpc server
 	_, grpcStatus := network.GrpcServer()
@@ -108,6 +120,22 @@ func (context *Context) Environ(includeCurrent bool) []string {
 	return slices.Map(maps.Keys(environ), func(el string) string {
 		return el + "=" + environ[el]
 	})
+}
+
+// List all the tools and groupd them by category
+func concatToolsDeclarations(prefix string, toolsDeclarations []*plugin_proto.ToolsDeclaration) map[string]string {
+	concatenatedDeclarations := map[string]string{}
+	for _, toolsDeclaration := range toolsDeclarations {
+		currentTools, ok := concatenatedDeclarations[prefix+":"+toolsDeclaration.GetCategory()]
+		if !ok {
+			currentTools = toolsDeclaration.GetPath()
+		} else {
+			currentTools = strings.Join([]string{currentTools, toolsDeclaration.GetPath()}, string(filepath.ListSeparator))
+		}
+		concatenatedDeclarations[prefix+":"+toolsDeclaration.GetCategory()] = currentTools
+	}
+
+	return concatenatedDeclarations
 }
 
 // Flatten list of all the processors present in the selected plugins

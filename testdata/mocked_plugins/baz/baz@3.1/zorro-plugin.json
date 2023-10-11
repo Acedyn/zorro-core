@@ -1,6 +1,16 @@
 {
   "tools": {
-    "commands": ["./commands"],
-    "actions": ["./actions"]
+    "commands": [
+      {
+        "path": "./commands",
+        "category": "baz"
+      }
+    ],
+    "actions": [
+      {
+        "path": "./actions",
+        "category": "baz"
+      }
+    ]
   }
 }

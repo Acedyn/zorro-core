@@ -4,7 +4,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 
 	"github.com/Acedyn/zorro-core/internal/context"
