@@ -25,7 +25,7 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 }
 
 // Listen for the command queue's queries and schedule it to the appropirate processor
-func listenCommandQueries() {
+func ListenCommandQueries() {
 	for commandQuery := range tools.CommandQueue() {
 		processorQuery := ProcessorQuery{ProcessorQuery: commandQuery.Command.GetProcessorQuery()}
 		_, err := GetOrStartProcessor(&processorQuery)
@@ -36,5 +36,6 @@ func listenCommandQueries() {
 }
 
 func init() {
-	scheduling_proto.RegisterSchedulingServer(network.GrpcServer(), &schedulingServer{})
+	grpcServer, _ := network.GrpcServer()
+	scheduling_proto.RegisterSchedulingServer(grpcServer, &schedulingServer{})
 }

@@ -8,18 +8,26 @@ import (
 	"google.golang.org/grpc"
 )
 
+type GrpcServerStatus struct {
+	Port      int
+	Host      string
+	IsRunning bool
+}
+
 var (
-	grpcServer *grpc.Server
-	once       sync.Once
+	grpcServerStatus *GrpcServerStatus
+	grpcServer       *grpc.Server
+	once             sync.Once
 )
 
 // Getter for the grpc server singleton
-func GrpcServer() *grpc.Server {
+func GrpcServer() (*grpc.Server, *GrpcServerStatus) {
 	once.Do(func() {
 		grpcServer = grpc.NewServer()
+		grpcServerStatus = &GrpcServerStatus{}
 	})
 
-	return grpcServer
+	return grpcServer, grpcServerStatus
 }
 
 // Start the grpc server
@@ -28,8 +36,16 @@ func ServeGrpc(host string, port int) error {
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
-	if err = GrpcServer().Serve(listener); err != nil {
+
+	server, status := GrpcServer()
+	status.Port = port
+	status.Host = host
+	status.IsRunning = true
+
+	if err = server.Serve(listener); err != nil {
 		return fmt.Errorf("failed to server grpc: %w", err)
 	}
+
+	status.IsRunning = false
 	return nil
 }

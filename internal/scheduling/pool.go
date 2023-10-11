@@ -16,10 +16,10 @@ type RegisteredProcessor struct {
 	// The host to connect to send commands
 	Host string
 	// Commands waiting to be scheduled
-	CommandQueue chan *tools.Command
+	commandQueue chan *tools.Command
 	// Commands scheduled and still running on the client side
-	RunningCommands     map[string]*tools.Command
-	RunningCommandsLock *sync.Mutex
+	runningCommands     map[string]*tools.Command
+	runningCommandsLock *sync.Mutex
 }
 
 var (
@@ -47,9 +47,9 @@ func registerProcessor(processorToRegister *processor.Processor, host string) *R
 		registeredProcessor = &RegisteredProcessor{
 			Processor:           processorToRegister,
 			Host:                host,
-			CommandQueue:        make(chan *tools.Command),
-			RunningCommands:     map[string]*tools.Command{},
-			RunningCommandsLock: &sync.Mutex{},
+			commandQueue:        make(chan *tools.Command),
+			runningCommands:     map[string]*tools.Command{},
+			runningCommandsLock: &sync.Mutex{},
 		}
 		ProcessorPool()[processorToRegister.GetId()] = registeredProcessor
 	}
@@ -93,7 +93,7 @@ func GetOrStartProcessor(query *ProcessorQuery) (*RegisteredProcessor, error) {
 		if availableProcessor.GetName() == query.GetName() {
 			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), query.GetContext().Environ(true))
 			if err != nil {
-				return nil, fmt.Errorf("could not start new client (%s): %w", availableProcessor, err)
+				return nil, fmt.Errorf("could not start new processor (%s): %w", availableProcessor, err)
 			}
 			// The client should now be registered
 			registeredProcessor := findRegisteredProcessor(&ProcessorQuery{
@@ -102,14 +102,14 @@ func GetOrStartProcessor(query *ProcessorQuery) (*RegisteredProcessor, error) {
 				},
 			})
 			if registeredProcessor == nil {
-				return nil, fmt.Errorf("client %s started but did not registered", pendingProcessor.Id)
+				return nil, fmt.Errorf("processor %s started but did not registered", pendingProcessor.Id)
 			}
 			return registeredProcessor, nil
 		}
 	}
 
 	return nil, fmt.Errorf(
-		"could not find running client or run new client to satisfy the query %s",
+		"could not find running or run processor to satisfy the query %s",
 		query,
 	)
 }

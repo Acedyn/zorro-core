@@ -37,7 +37,6 @@ var pythonProcessorQuery = ProcessorQuery{
 func TestProcessorRegistration(t *testing.T) {
 	host := "localhost"
 	port, err := getFreePort()
-	os.Setenv("ZORRO_CORE_PORT", strconv.Itoa(port))
 
 	if err != nil {
 		t.Errorf("Could not get free port: %s", err.Error())
@@ -49,7 +48,8 @@ func TestProcessorRegistration(t *testing.T) {
 			t.Errorf("An error occured while serving GRPC: %s", err.Error())
 		}
 	}()
-	defer network.GrpcServer().GracefulStop()
+	grpcServer, _ := network.GrpcServer()
+	defer grpcServer.GracefulStop()
 
 	cwdPath, err := os.Getwd()
 	if err != nil {
@@ -74,6 +74,4 @@ func TestProcessorRegistration(t *testing.T) {
 		t.Errorf("An error occured while getting processor from query %s: %s", pythonProcessorQuery, err.Error())
 		return
 	}
-
-	network.GrpcServer().GracefulStop()
 }
