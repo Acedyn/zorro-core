@@ -4,6 +4,8 @@ github.com/Acedyn/zorro-proto v0.0.0-20231011063937-ac4f99622112 h1:3B3W8zY1fY5Z
 github.com/Acedyn/zorro-proto v0.0.0-20231011063937-ac4f99622112/go.mod h1:nPVhUCRkOeO0UVn/ZbTmuAUMT7G5hDfkpvzD8tzYHYI=
 github.com/Acedyn/zorro-proto v0.0.0-20231011064407-6079e7fb1cbd h1:saVmCnHPIeO+y2vGzS3FWZbLNJ0JhCOeHNQ3xXQ3rig=
 github.com/Acedyn/zorro-proto v0.0.0-20231011064407-6079e7fb1cbd/go.mod h1:nPVhUCRkOeO0UVn/ZbTmuAUMT7G5hDfkpvzD8tzYHYI=
+github.com/Acedyn/zorro-proto v0.0.0-20231015065232-7fcb1176cf34 h1:wkqv+LTAOe501rXloOFdj5c2Fx1hrKfg4mkm8sApeEM=
+github.com/Acedyn/zorro-proto v0.0.0-20231015065232-7fcb1176cf34/go.mod h1:nPVhUCRkOeO0UVn/ZbTmuAUMT7G5hDfkpvzD8tzYHYI=
 github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
 github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
 github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
