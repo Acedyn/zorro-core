@@ -1,11 +1,14 @@
 import argparse
 import os
 import socket
+import importlib.util
+from typing import List
 import uuid
+from pathlib import Path
 from concurrent import futures
 
-from protos.zorroprotos.processor import processor_pb2, processor_status_pb2
-from protos.zorroprotos.scheduling import scheduler_pb2_grpc, scheduler_pb2
+from zorroprotos.processor import processor_pb2, processor_status_pb2
+from zorroprotos.scheduling import scheduler_pb2_grpc, scheduler_pb2
 from zorro_python.logger import logger
 
 import grpc
@@ -24,11 +27,52 @@ def create_server() -> tuple[grpc.Server, int]:
     return server, port
 
 
-def register_commands(server: grpc.Server, processor: processor_pb2.Processor):
+def discover_commands(server: grpc.Server, commands: List[Path]):
     """
     Fetch all the commands available in the current context
     """
-    reflection.enable_server_reflection((reflection.SERVICE_NAME), server)
+    service_names = [reflection.SERVICE_NAME]
+
+    for command_path in commands:
+        logger.info("Registering service at path %s", command_path)
+        if not command_path.is_file():
+            logger.error(
+                "Could not load command at path %s: invalid path",
+                command_path.as_posix(),
+            )
+            continue
+
+        module_spec = importlib.util.spec_from_file_location(
+            f"zorro_python.commands.{command_path.stem}", command_path.as_posix()
+        )
+        if module_spec is None:
+            logger.error(
+                "Could not load command at path %s: invalid module",
+                command_path.as_posix(),
+            )
+            continue
+
+        module = importlib.util.module_from_spec(module_spec)
+        if module_spec.loader is None:
+            logger.error(
+                "Could not load command at path %s: invalid module loader",
+                command_path.as_posix(),
+            )
+            continue
+
+        module_spec.loader.exec_module(module)
+        if not hasattr(module, "register_zorro_commands"):
+            logger.error(
+                'Could not load command at path %s: missing "register_zorro_commands" function',
+                command_path.as_posix(),
+            )
+            continue
+
+        for service_name in module.register_zorro_commands(server):
+            service_names.append(service_name)
+            logger.info("Service %s registered", service_name)
+
+        reflection.enable_server_reflection(service_names, server)
 
 
 def register_processor(
@@ -88,6 +132,13 @@ def parse_cli():
         help="The id is used when we are waiting for a processor to start, to recognize it from the others",
     )
     parser.add_argument(
+        "-c",
+        "--commands",
+        type=Path,
+        nargs="*",
+        help="List of path to look for commands",
+    )
+    parser.add_argument(
         "--zorro-core-host",
         type=str,
         default=os.getenv("ZORRO_GRPC_CORE_HOST", "127.0.0.1"),
@@ -111,29 +162,28 @@ def parse_cli():
 
 def main():
     arguments = parse_cli()
-    server, port = create_server()
 
-    # Register the processor one first time
-    processor = register_processor(
-        arguments.zorro_core_host,
-        arguments.zorro_core_port,
-        port,
-        arguments.id,
-        processor_status_pb2.STARTING,
-    )
-    register_commands(server, processor)
+    server, port = create_server()
+    discover_commands(server, arguments.commands)
+
     server.start()
 
-    # Register the processor again to update its status
-    processor = register_processor(
-        arguments.zorro_core_host,
-        arguments.zorro_core_port,
-        port,
-        arguments.id,
-        processor_status_pb2.IDLE,
-    )
+    # Register the processor in idle mode
+    try:
+        register_processor(
+            arguments.zorro_core_host,
+            arguments.zorro_core_port,
+            port,
+            arguments.id,
+            processor_status_pb2.IDLE,
+        )
+    except grpc.RpcError as e:
+        logger.error("Could not register rpc server to a zorro-core instance: %s", e)
 
-    server.wait_for_termination()
+    try:
+        server.wait_for_termination()
+    except KeyboardInterrupt:
+        logger.info("Stopping gRPC server")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
-from protos.zorroprotos.tools import command_pb2 as _command_pb2
-from protos.zorroprotos.context import context_pb2 as _context_pb2
+from zorroprotos.tools import command_pb2 as _command_pb2
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -20,14 +19,20 @@ WARNING: LogLevels
 ERROR: LogLevels
 CRITICAL: LogLevels
 
-class LogParameters(_message.Message):
-    __slots__ = ["command", "context", "message", "level"]
-    COMMAND_FIELD_NUMBER: _ClassVar[int]
-    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+class LogInput(_message.Message):
+    __slots__ = ["message", "level"]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     LEVEL_FIELD_NUMBER: _ClassVar[int]
-    command: _command_pb2.Command
-    context: _context_pb2.Context
     message: str
     level: LogLevels
-    def __init__(self, command: _Optional[_Union[_command_pb2.Command, _Mapping]] = ..., context: _Optional[_Union[_context_pb2.Context, _Mapping]] = ..., message: _Optional[str] = ..., level: _Optional[_Union[LogLevels, str]] = ...) -> None: ...
+    def __init__(self, message: _Optional[str] = ..., level: _Optional[_Union[LogLevels, str]] = ...) -> None: ...
+
+class LogOutput(_message.Message):
+    __slots__ = ["zorro_command", "message", "timestamp"]
+    ZORRO_COMMAND_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    zorro_command: _command_pb2.Command
+    message: str
+    timestamp: int
+    def __init__(self, zorro_command: _Optional[_Union[_command_pb2.Command, _Mapping]] = ..., message: _Optional[str] = ..., timestamp: _Optional[int] = ...) -> None: ...

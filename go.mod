@@ -3,7 +3,7 @@ module github.com/Acedyn/zorro-core
 go 1.21.1
 
 require (
-	github.com/Acedyn/zorro-proto v0.0.0-20231011064407-6079e7fb1cbd
+	github.com/Acedyn/zorro-proto v0.0.0-20231015065232-7fcb1176cf34
 	github.com/life4/genesis v1.9.0
 	golang.org/x/text v0.13.0
 	google.golang.org/grpc v1.58.1

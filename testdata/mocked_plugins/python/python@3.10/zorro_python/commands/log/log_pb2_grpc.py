@@ -2,7 +2,6 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from protos.zorroprotos.tools import command_pb2 as protos_dot_zorroprotos_dot_tools_dot_command__pb2
 from zorro_python.commands.log import log_pb2 as zorro__python_dot_commands_dot_log_dot_log__pb2
 
 
@@ -18,18 +17,13 @@ class LogStub(object):
         """
         self.Execute = channel.unary_stream(
                 '/zorro_python.Log/Execute',
-                request_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.SerializeToString,
-                response_deserializer=protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.FromString,
+                request_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogInput.SerializeToString,
+                response_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogOutput.FromString,
                 )
         self.Undo = channel.unary_stream(
                 '/zorro_python.Log/Undo',
-                request_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.SerializeToString,
-                response_deserializer=protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.FromString,
-                )
-        self.Test = channel.unary_stream(
-                '/zorro_python.Log/Test',
-                request_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.SerializeToString,
-                response_deserializer=protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.FromString,
+                request_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogInput.SerializeToString,
+                response_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogOutput.FromString,
                 )
 
 
@@ -49,29 +43,18 @@ class LogServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def Test(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
 
 def add_LogServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Execute': grpc.unary_stream_rpc_method_handler(
                     servicer.Execute,
-                    request_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.FromString,
-                    response_serializer=protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.SerializeToString,
+                    request_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogInput.FromString,
+                    response_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogOutput.SerializeToString,
             ),
             'Undo': grpc.unary_stream_rpc_method_handler(
                     servicer.Undo,
-                    request_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.FromString,
-                    response_serializer=protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.SerializeToString,
-            ),
-            'Test': grpc.unary_stream_rpc_method_handler(
-                    servicer.Test,
-                    request_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.FromString,
-                    response_serializer=protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.SerializeToString,
+                    request_deserializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogInput.FromString,
+                    response_serializer=zorro__python_dot_commands_dot_log_dot_log__pb2.LogOutput.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -96,8 +79,8 @@ class Log(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/zorro_python.Log/Execute',
-            zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.SerializeToString,
-            protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.FromString,
+            zorro__python_dot_commands_dot_log_dot_log__pb2.LogInput.SerializeToString,
+            zorro__python_dot_commands_dot_log_dot_log__pb2.LogOutput.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -113,24 +96,7 @@ class Log(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/zorro_python.Log/Undo',
-            zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.SerializeToString,
-            protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def Test(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/zorro_python.Log/Test',
-            zorro__python_dot_commands_dot_log_dot_log__pb2.LogParameters.SerializeToString,
-            protos_dot_zorroprotos_dot_tools_dot_command__pb2.Command.FromString,
+            zorro__python_dot_commands_dot_log_dot_log__pb2.LogInput.SerializeToString,
+            zorro__python_dot_commands_dot_log_dot_log__pb2.LogOutput.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

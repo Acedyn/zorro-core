@@ -2,8 +2,7 @@ syntax = "proto3";
 
 package zorro_python;
 
-import "protos/zorroprotos/tools/command.proto";
-import "protos/zorroprotos/context/context.proto";
+import "zorroprotos/tools/command.proto";
 
 enum LogLevels {
   DEBUG = 0;
@@ -13,21 +12,26 @@ enum LogLevels {
   CRITICAL = 4;
 }
 
-// Parameters for the log rpc
-message LogParameters {
-  // The command's details
-  zorro.Command command = 1;
-  // The selected context
-  zorro.Context context = 2;
+// Input Parameters for the log rpc
+message LogInput {
   // The message to log
-  string message = 3;
+  string message = 1;
   // The level of importance of the message
-  LogLevels level = 4;
+  LogLevels level = 2;
+}
+
+// Output Parameters for the log rpc
+message LogOutput {
+  // The command's details
+  zorro.Command zorro_command = 1;
+  // The logged message
+  string message = 2;
+  // The time at wich the message was logged
+  uint64 timestamp = 3;
 }
 
 // Simple log message
 service Log {
-  rpc Execute(LogParameters) returns (stream zorro.Command);
-  rpc Undo(LogParameters) returns (stream zorro.Command);
-  rpc Test(LogParameters) returns (stream zorro.Command);
+  rpc Execute(LogInput) returns (stream LogOutput);
+  rpc Undo(LogInput) returns (stream LogOutput);
 }

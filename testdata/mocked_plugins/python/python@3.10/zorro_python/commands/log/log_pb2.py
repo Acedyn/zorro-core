@@ -11,11 +11,10 @@ from google.protobuf.internal import builder as _builder
 _sym_db = _symbol_database.Default()
 
 
-from protos.zorroprotos.tools import command_pb2 as protos_dot_zorroprotos_dot_tools_dot_command__pb2
-from protos.zorroprotos.context import context_pb2 as protos_dot_zorroprotos_dot_context_dot_context__pb2
+from zorroprotos.tools import command_pb2 as zorroprotos_dot_tools_dot_command__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n#zorro_python/commands/log/log.proto\x12\x0czorro_python\x1a&protos/zorroprotos/tools/command.proto\x1a(protos/zorroprotos/context/context.proto\"\x8a\x01\n\rLogParameters\x12\x1f\n\x07\x63ommand\x18\x01 \x01(\x0b\x32\x0e.zorro.Command\x12\x1f\n\x07\x63ontext\x18\x02 \x01(\x0b\x32\x0e.zorro.Context\x12\x0f\n\x07message\x18\x03 \x01(\t\x12&\n\x05level\x18\x04 \x01(\x0e\x32\x17.zorro_python.LogLevels*F\n\tLogLevels\x12\t\n\x05\x44\x45\x42UG\x10\x00\x12\x08\n\x04INFO\x10\x01\x12\x0b\n\x07WARNING\x10\x02\x12\t\n\x05\x45RROR\x10\x03\x12\x0c\n\x08\x43RITICAL\x10\x04\x32\xad\x01\n\x03Log\x12\x38\n\x07\x45xecute\x12\x1b.zorro_python.LogParameters\x1a\x0e.zorro.Command0\x01\x12\x35\n\x04Undo\x12\x1b.zorro_python.LogParameters\x1a\x0e.zorro.Command0\x01\x12\x35\n\x04Test\x12\x1b.zorro_python.LogParameters\x1a\x0e.zorro.Command0\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n#zorro_python/commands/log/log.proto\x12\x0czorro_python\x1a\x1fzorroprotos/tools/command.proto\"C\n\x08LogInput\x12\x0f\n\x07message\x18\x01 \x01(\t\x12&\n\x05level\x18\x02 \x01(\x0e\x32\x17.zorro_python.LogLevels\"V\n\tLogOutput\x12%\n\rzorro_command\x18\x01 \x01(\x0b\x32\x0e.zorro.Command\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x01(\x04*F\n\tLogLevels\x12\t\n\x05\x44\x45\x42UG\x10\x00\x12\x08\n\x04INFO\x10\x01\x12\x0b\n\x07WARNING\x10\x02\x12\t\n\x05\x45RROR\x10\x03\x12\x0c\n\x08\x43RITICAL\x10\x04\x32~\n\x03Log\x12<\n\x07\x45xecute\x12\x16.zorro_python.LogInput\x1a\x17.zorro_python.LogOutput0\x01\x12\x39\n\x04Undo\x12\x16.zorro_python.LogInput\x1a\x17.zorro_python.LogOutput0\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,10 +22,12 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'zorro_python.commands.log.l
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _globals['_LOGLEVELS']._serialized_start=276
-  _globals['_LOGLEVELS']._serialized_end=346
-  _globals['_LOGPARAMETERS']._serialized_start=136
-  _globals['_LOGPARAMETERS']._serialized_end=274
-  _globals['_LOG']._serialized_start=349
-  _globals['_LOG']._serialized_end=522
+  _globals['_LOGLEVELS']._serialized_start=243
+  _globals['_LOGLEVELS']._serialized_end=313
+  _globals['_LOGINPUT']._serialized_start=86
+  _globals['_LOGINPUT']._serialized_end=153
+  _globals['_LOGOUTPUT']._serialized_start=155
+  _globals['_LOGOUTPUT']._serialized_end=241
+  _globals['_LOG']._serialized_start=315
+  _globals['_LOG']._serialized_end=441
 # @@protoc_insertion_point(module_scope)
