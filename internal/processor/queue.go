@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"bytes"
 	"sync"
 )
 
@@ -14,6 +15,8 @@ var (
 type PendingProcessor struct {
 	*Processor
 	Registration chan error
+	Stdout       bytes.Buffer
+	Stderr       bytes.Buffer
 }
 
 // Getter for the processor queue singleton which holds the queue

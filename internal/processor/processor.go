@@ -1,12 +1,16 @@
 package processor
 
 import (
-	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/Acedyn/zorro-core/internal/utils"
+
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
+	"github.com/google/uuid"
 	"github.com/hoisie/mustache"
 	"github.com/life4/genesis/maps"
 )
@@ -16,20 +20,23 @@ type Processor struct {
 	*processor_proto.Processor
 }
 
-// Start the client into a running client
-func (processor *Processor) Start(
+// Start the client into a running client. This methods make a copy of the processor
+func (processor Processor) Start(
 	metadata map[string]string,
 	environ []string,
 	commandPaths []string,
 ) (*PendingProcessor, error) {
 	registration := make(chan error)
 	pendingProcessor := &PendingProcessor{
-		Processor:    processor,
+		Processor:    &processor,
 		Registration: registration,
 	}
 	startingStatus := processor_proto.ProcessorStatus_STARTING
 	pendingProcessor.Status = startingStatus
 	pendingProcessor.Metadata = maps.Merge(processor.GetMetadata(), metadata)
+
+	// Generate an ID for this new processor
+	processor.Id = uuid.New().String()
 
 	// Apply the metadata and the name on the template
 	runCommand, err := processor.buildCommand(commandPaths)
@@ -42,9 +49,14 @@ func (processor *Processor) Start(
 	processorCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
 	processorCommand.Env = environ
 
-	var stdBuffer bytes.Buffer
-	processorCommand.Stdout = &stdBuffer
-	processorCommand.Stderr = &stdBuffer
+	processorCommand.Stdout = io.MultiWriter(
+		&pendingProcessor.Stdout,
+		utils.NewPrefixedWriter(os.Stdout, "[PROCESSOR: "+processor.Id+"] "),
+	)
+	processorCommand.Stderr = io.MultiWriter(
+		&pendingProcessor.Stderr,
+		utils.NewPrefixedWriter(os.Stderr, "[PROCESSOR: "+processor.Id+"] "),
+	)
 
 	// Start the subprocess
 	err = processorCommand.Start()
@@ -60,7 +72,12 @@ func (processor *Processor) Start(
 	// Wait for the command to end so we can get the output code
 	commandResult := make(chan error)
 	go func() {
-		commandResult <- processorCommand.Wait()
+		output := processorCommand.Wait()
+		if output != nil {
+			commandResult <- fmt.Errorf("the processor command %s exited: %w", splittedCommand, output)
+		} else {
+			commandResult <- nil
+		}
 	}()
 
 	// We wait for either the processor to be registered or the command to error out
