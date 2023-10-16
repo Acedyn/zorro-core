@@ -20,6 +20,8 @@ type RegisteredProcessor struct {
 	// Commands scheduled and still running on the client side
 	runningCommands     map[string]*tools.Command
 	runningCommandsLock *sync.Mutex
+	// The client used to send command requests
+	Client *ReflectionClient
 }
 
 var (
@@ -38,7 +40,7 @@ func ProcessorPool() map[string]*RegisteredProcessor {
 }
 
 // Register the given client to the client pool
-func registerProcessor(processorToRegister *processor.Processor, host string) *RegisteredProcessor {
+func registerProcessor(processorToRegister *processor.Processor, host string, client *ReflectionClient) *RegisteredProcessor {
 	// Check if the client is already registered
 	processorPoolLock.Lock()
 	defer processorPoolLock.Unlock()
@@ -50,6 +52,7 @@ func registerProcessor(processorToRegister *processor.Processor, host string) *R
 			commandQueue:        make(chan *tools.Command),
 			runningCommands:     map[string]*tools.Command{},
 			runningCommandsLock: &sync.Mutex{},
+			Client:              client,
 		}
 		ProcessorPool()[processorToRegister.GetId()] = registeredProcessor
 	}

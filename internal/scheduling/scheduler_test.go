@@ -1,6 +1,7 @@
 package scheduling
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -68,9 +69,17 @@ func TestProcessorRegistration(t *testing.T) {
 
 	pythonProcessorQuery.Context = resolvedContext.Context
 
-	_, err = GetOrStartProcessor(&pythonProcessorQuery)
+	registeredProcessor, err := GetOrStartProcessor(&pythonProcessorQuery)
 	if err != nil {
 		t.Errorf("An error occured while getting processor from query %s: %s", pythonProcessorQuery, err.Error())
 		return
 	}
+
+	s, err := registeredProcessor.Client.ListServices()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(s)
+	}
+	t.Error()
 }

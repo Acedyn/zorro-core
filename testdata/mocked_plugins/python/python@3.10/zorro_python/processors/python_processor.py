@@ -22,7 +22,7 @@ def create_server() -> tuple[grpc.Server, int]:
     Create an initialize the gRPC server
     """
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=100))
-    port = server.add_insecure_port("[::]:")
+    port = server.add_insecure_port("localhost:0")
     logger.info("Server created on port %d", port)
     return server, port
 
@@ -114,7 +114,7 @@ def register_processor(
                 host=processor_url,
             )
         )
-        logger.info("Processor %s registered", python_processor)
+        logger.info("Processor registered with id %s", python_processor.id)
         return python_processor
 
 
@@ -134,6 +134,7 @@ def parse_cli():
     parser.add_argument(
         "-c",
         "--commands",
+        default=[],
         type=Path,
         nargs="*",
         help="List of path to look for commands",
