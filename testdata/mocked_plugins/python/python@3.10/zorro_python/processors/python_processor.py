@@ -22,7 +22,7 @@ def create_server() -> tuple[grpc.Server, int]:
     Create an initialize the gRPC server
     """
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=100))
-    port = server.add_insecure_port("localhost:0")
+    port = server.add_insecure_port("127.0.0.1:0")
     logger.info("Server created on port %d", port)
     return server, port
 
@@ -94,7 +94,7 @@ def register_processor(
     # otherwise use localhost
     processor_host = "127.0.0.1"
     current_host = socket.gethostbyname(socket.gethostname())
-    if core_host != current_host or core_host in ["127.0.0.1", "localhost"]:
+    if core_host != current_host and core_host not in ["127.0.0.1", "localhost"]:
         processor_host = current_host
     processor_url = f"{processor_host}:{processor_port}"
 
