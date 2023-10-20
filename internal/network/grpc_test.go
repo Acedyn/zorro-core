@@ -10,7 +10,7 @@ import (
 )
 
 func getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
@@ -25,7 +25,7 @@ func getFreePort() (int, error) {
 
 // Test Starting the grpc server
 func TestServeGrpc(t *testing.T) {
-	host := "localhost"
+	host := "127.0.0.1"
 	port, err := getFreePort()
 	if err != nil {
 		t.Errorf("Could not get free port: %s", err.Error())

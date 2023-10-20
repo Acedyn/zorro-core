@@ -12,7 +12,7 @@ import (
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection/grpc_reflection_v1"
+	"google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
 type schedulingServer struct {
@@ -36,7 +36,7 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 		return processorRegistration.Processor, registrationErr
 	}
 
-	reflectionClient := grpc_reflection_v1.NewServerReflectionClient(conn)
+	reflectionClient := grpc_reflection_v1alpha.NewServerReflectionClient(conn)
 	registeredProcessor := registerProcessor(&processor.Processor{
 		Processor: processorRegistration.Processor,
 	}, processorRegistration.GetHost(), NewReflectedClient(reflectionClient))

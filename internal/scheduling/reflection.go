@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 
-	"google.golang.org/grpc/reflection/grpc_reflection_v1"
+	"google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ReflectionClient struct {
-	stub grpc_reflection_v1.ServerReflectionClient
+	stub grpc_reflection_v1alpha.ServerReflectionClient
 }
 
 func (client *ReflectionClient) CallStream(descriptor protoreflect.MethodDescriptor) {
@@ -22,14 +22,14 @@ func (client *ReflectionClient) CallStream(descriptor protoreflect.MethodDescrip
 	// }
 }
 
-func (client *ReflectionClient) ListServices() ([]*grpc_reflection_v1.ServiceResponse, error) {
+func (client *ReflectionClient) ListServices() ([]*grpc_reflection_v1alpha.ServiceResponse, error) {
 	// The reflection service uses streams
 	stream, err := client.stub.ServerReflectionInfo(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("an error occured while establishing stream connection with reflection: %w", err)
 	}
 
-	waitListResponse := make(chan *grpc_reflection_v1.ListServiceResponse)
+	waitListResponse := make(chan *grpc_reflection_v1alpha.ListServiceResponse)
 	waitError := make(chan error)
 
 	// Gather all the responses from the reflection service
@@ -38,13 +38,14 @@ func (client *ReflectionClient) ListServices() ([]*grpc_reflection_v1.ServiceRes
 			in, err := stream.Recv()
 			if err == io.EOF {
 				waitError <- nil
+        return
 			} else if err != nil {
 				waitError <- err
+        return
 			}
-			// TODO: Handle errors
 
 			switch response := in.MessageResponse.(type) {
-			case *grpc_reflection_v1.ServerReflectionResponse_ListServicesResponse:
+			case *grpc_reflection_v1alpha.ServerReflectionResponse_ListServicesResponse:
 				waitListResponse <- response.ListServicesResponse
 			default:
 				waitError <- fmt.Errorf("an unexpected response type was reseived")
@@ -53,8 +54,8 @@ func (client *ReflectionClient) ListServices() ([]*grpc_reflection_v1.ServiceRes
 	}()
 
 	// Send the request
-	err = stream.Send(&grpc_reflection_v1.ServerReflectionRequest{
-		MessageRequest: &grpc_reflection_v1.ServerReflectionRequest_ListServices{},
+	err = stream.Send(&grpc_reflection_v1alpha.ServerReflectionRequest{
+		MessageRequest: &grpc_reflection_v1alpha.ServerReflectionRequest_ListServices{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("an error occured while querying services with reflection: %w", err)
@@ -75,7 +76,7 @@ func (client *ReflectionClient) ListServices() ([]*grpc_reflection_v1.ServiceRes
 	}
 }
 
-func NewReflectedClient(client grpc_reflection_v1.ServerReflectionClient) *ReflectionClient {
+func NewReflectedClient(client grpc_reflection_v1alpha.ServerReflectionClient) *ReflectionClient {
 	return &ReflectionClient{
 		stub: client,
 	}

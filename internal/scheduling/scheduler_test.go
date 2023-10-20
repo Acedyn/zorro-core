@@ -15,7 +15,7 @@ import (
 )
 
 func getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
@@ -35,7 +35,7 @@ var pythonProcessorQuery = ProcessorQuery{
 }
 
 func TestProcessorRegistration(t *testing.T) {
-	host := "localhost"
+	host := "127.0.0.1"
 	port, err := getFreePort()
 
 	if err != nil {
