@@ -28,7 +28,7 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 	// TODO: Handle closing the connection when the processor deregisters
 	conn, err := grpc.Dial(processorRegistration.GetHost(), opts...)
 	if err != nil {
-		registrationErr := fmt.Errorf("Could not create connection with processor at host %s: %w", processorRegistration.GetHost(), err)
+		registrationErr := fmt.Errorf("could not create connection with processor at host %s: %w", processorRegistration.GetHost(), err)
 		if pendingProcessor := processor.UnQueueProcessor(processorRegistration.Processor.GetId()); pendingProcessor != nil {
 			pendingProcessor.Registration <- registrationErr
 		}
@@ -36,10 +36,19 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 		return processorRegistration.Processor, registrationErr
 	}
 
-	reflectionClient := grpc_reflection_v1alpha.NewServerReflectionClient(conn)
+  reflectedClient, err := NewReflectedClient(grpc_reflection_v1alpha.NewServerReflectionClient(conn))
+	if err != nil {
+		registrationErr := fmt.Errorf("could not create reflection client with processor at host %s: %w", processorRegistration.GetHost(), err)
+		if pendingProcessor := processor.UnQueueProcessor(processorRegistration.Processor.GetId()); pendingProcessor != nil {
+			pendingProcessor.Registration <- registrationErr
+		}
+
+		return processorRegistration.Processor, registrationErr
+	}
+
 	registeredProcessor := registerProcessor(&processor.Processor{
 		Processor: processorRegistration.Processor,
-	}, processorRegistration.GetHost(), NewReflectedClient(reflectionClient))
+	}, processorRegistration.GetHost(), reflectedClient)
 
 	return registeredProcessor.Processor.Processor, nil
 }
