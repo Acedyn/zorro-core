@@ -45,7 +45,16 @@ func (processor Processor) Start(
 	}
 
 	// Build the subprocess's env with the context's environment variables
-	splittedCommand := strings.Split(runCommand, " ")
+	splittedCommand := []string{}
+	// Handle command sections with spaces
+	// TODO: Handle single quotes too
+	for index, commandSection := range strings.Split(runCommand, "\"") {
+		if index%2 == 0 {
+			splittedCommand = append(splittedCommand, strings.Split(commandSection, " ")...)
+		} else {
+			splittedCommand = append(splittedCommand, commandSection)
+		}
+	}
 	processorCommand := exec.Command(splittedCommand[0], splittedCommand[1:]...)
 	processorCommand.Env = environ
 
@@ -68,6 +77,7 @@ func (processor Processor) Start(
 	processorQueueLock.Lock()
 	ProcessorQueue()[pendingProcessor.GetId()] = pendingProcessor
 	processorQueueLock.Unlock()
+	fmt.Println(splittedCommand)
 
 	// Wait for the command to end so we can get the output code
 	commandResult := make(chan error)

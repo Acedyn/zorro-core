@@ -10,9 +10,6 @@ import (
 
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
 type schedulingServer struct {
@@ -21,22 +18,8 @@ type schedulingServer struct {
 
 // As soon as a processor starts, it has to registers itself
 func (service *schedulingServer) RegisterProcessor(c context.Context, processorRegistration *scheduling_proto.ProcessorRegistration) (*processor_proto.Processor, error) {
-	// Establish the grpc connection with the new processor
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-
 	// TODO: Handle closing the connection when the processor deregisters
-	conn, err := grpc.Dial(processorRegistration.GetHost(), opts...)
-	if err != nil {
-		registrationErr := fmt.Errorf("could not create connection with processor at host %s: %w", processorRegistration.GetHost(), err)
-		if pendingProcessor := processor.UnQueueProcessor(processorRegistration.Processor.GetId()); pendingProcessor != nil {
-			pendingProcessor.Registration <- registrationErr
-		}
-
-		return processorRegistration.Processor, registrationErr
-	}
-
-  reflectedClient, err := NewReflectedClient(grpc_reflection_v1alpha.NewServerReflectionClient(conn))
+	reflectedClient, err := NewReflectedClient(processorRegistration.GetHost())
 	if err != nil {
 		registrationErr := fmt.Errorf("could not create reflection client with processor at host %s: %w", processorRegistration.GetHost(), err)
 		if pendingProcessor := processor.UnQueueProcessor(processorRegistration.Processor.GetId()); pendingProcessor != nil {
@@ -46,6 +29,7 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 		return processorRegistration.Processor, registrationErr
 	}
 
+	// Inform the processor queue that the processor was registered
 	registeredProcessor := registerProcessor(&processor.Processor{
 		Processor: processorRegistration.Processor,
 	}, processorRegistration.GetHost(), reflectedClient)

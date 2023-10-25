@@ -11,7 +11,7 @@
     {
       "name": "python",
       "version": "3.10",
-      "start_processor_template": "{{name}} -m zorro_python.processors.python_processor -i {{id}} -c{{#commands}} {{.}}{{/commands}}"
+      "start_processor_template": "{{name}} -m zorro_python.processors.python_processor -i {{id}} -c{{#commands}} \"{{.}}\"{{/commands}}"
     }
   ],
   "tools": {
