@@ -1,7 +1,6 @@
 package scheduling
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -75,11 +74,24 @@ func TestProcessorRegistration(t *testing.T) {
 		return
 	}
 
-	s, err := registeredProcessor.Client.ListServices()
+	output, err := registeredProcessor.Client.InvokeRpcServerStream("zorro_python.Log", "Execute")
 	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(s)
+		t.Errorf("An error occured while invoking rpc method %s: %s", "/zorro_python.Log/Execute", err.Error())
+		return
 	}
-	t.Error()
+
+	if err != nil {
+		t.Errorf("An error occured while invoking rpc method %s: %s", "/zorro_python.Log/Execute", err.Error())
+		return
+	}
+
+	messageValue, ok := output["message"]
+	if !ok {
+		t.Errorf("Expected a value in the field 'message': No value found in the returned output")
+		return
+	}
+	if messageValue.String() != "DEBUG: " {
+		t.Errorf("Expected value %s in the returned output: Revieved %s", "DEBUG :", messageValue.String())
+		return
+	}
 }
