@@ -14,6 +14,12 @@ var (
 	once         sync.Once
 )
 
+type CommandExecutionType string
+
+var EXECUTE_COMMAND CommandExecutionType = "Execute"
+var UNDO_COMMAND CommandExecutionType = "Undo"
+var TEST_COMMAND CommandExecutionType = "Test"
+
 // Wrapped command with methods attached
 type Command struct {
 	*tools_proto.Command
@@ -26,9 +32,10 @@ func (command *Command) GetBase() *ToolBase {
 
 // Started command, waiting to be sheduled
 type CommandQuery struct {
-	Command *Command
-	Result  chan error
-	Context *context.Context
+	Command       *Command
+	ExecutionType CommandExecutionType
+	Result        chan error
+	Context       *context.Context
 }
 
 // Getter for the commands queue singleton which holds the queue
@@ -51,17 +58,39 @@ func (command *Command) Traverse(task func(TraversableTool) error) error {
 }
 
 // The execution of the commands is handled by the scheduler, and processed by the clients
-func (command *Command) Execute(c *context.Context) error {
+func (command *Command) execute(c *context.Context, executionType CommandExecutionType) chan error {
 	result := make(chan error)
 	CommandQueue() <- &CommandQuery{
-		Command: command,
-		Result:  result,
-		Context: c,
+		Command:       command,
+		ExecutionType: executionType,
+		Result:        result,
+		Context:       c,
 	}
 
 	// Wait for the scheduler to take the command from the queue
 	// And let it set the result
-	return <-result
+	return result
+}
+
+// Start the execution of the command by sending a grpc request to a processor
+func (command *Command) Execute(c *context.Context) error {
+	// Wait for the scheduler to take the command from the queue
+	// And let it set the result
+	return <-command.execute(c, EXECUTE_COMMAND)
+}
+
+// Start the execution of the command by sending a grpc request to a processor
+func (command *Command) Undo(c *context.Context) error {
+	// Wait for the scheduler to take the command from the queue
+	// And let it set the result
+	return <-command.execute(c, UNDO_COMMAND)
+}
+
+// Start the execution of the command by sending a grpc request to a processor
+func (command *Command) Test(c *context.Context) error {
+	// Wait for the scheduler to take the command from the queue
+	// And let it set the result
+	return <-command.execute(c, TEST_COMMAND)
 }
 
 // Update the command with a patch

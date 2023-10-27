@@ -74,7 +74,40 @@ func TestProcessorRegistration(t *testing.T) {
 		return
 	}
 
-	output, err := registeredProcessor.Client.InvokeRpcServerStream("zorro_python.Log", "Execute")
+	output, stream, err := registeredProcessor.Client.InvokeRpcServerStream("zorro_python.Log", "Execute")
+
+	outputMessage := dynamicpb.NewMessage(methodDescriptor.Output())
+
+	// Build the dynamic message
+	missingKeys := []string{}
+	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
+	inputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+		if value, ok := input[fieldDescriptor.TextName()]; ok {
+			inputMessage.Set(fieldDescriptor, value)
+		} else {
+			missingKeys = append(missingKeys, fieldDescriptor.TextName())
+			return false
+		}
+		return true
+	})
+
+	if len(missingKeys) > 0 {
+		return nil, nil, fmt.Errorf("missing input values for method %s: %s", methodDescriptor.FullName(), missingKeys)
+	}
+
+	err = stream.RecvMsg(outputMessage)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("could not receive message %s: %w", outputMessage, err)
+	}
+
+	formattedOutput := map[string]protoreflect.Value{}
+	outputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+		formattedOutput[fieldDescriptor.TextName()] = value
+		return true
+	})
+	return formattedOutput, nil
+
 	if err != nil {
 		t.Errorf("An error occured while invoking rpc method %s: %s", "/zorro_python.Log/Execute", err.Error())
 		return
