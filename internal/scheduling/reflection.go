@@ -15,7 +15,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 type ReflectionClient struct {
@@ -157,39 +156,50 @@ func (client *ReflectionClient) GetServiceDescriptors() []protoreflect.ServiceDe
 	return serviceDescriptors
 }
 
-// Fetch the file descriptors for each service present
-func (client *ReflectionClient) InvokeRpcServerStream(serviceName, methodName string) (map[string]protoreflect.Value, error) {
+// Find a registered service via its full name (generally [package_name].[service_name] unless its nested)
+func (client *ReflectionClient) GetdMethodDescriptor(serviceName, methodName string) (protoreflect.MethodDescriptor, string, error) {
 	// Get the service
 	var serviceDescriptor protoreflect.ServiceDescriptor
-	for _, service := range client.GetServiceDescriptors() {
-		if string(service.FullName()) == serviceName {
-			serviceDescriptor = service
+	client.registry.RangeFiles(func(fileDescriptor protoreflect.FileDescriptor) bool {
+		for serviceIndex := 0; serviceIndex < fileDescriptor.Services().Len(); serviceIndex += 1 {
+			service := fileDescriptor.Services().Get(serviceIndex)
+			if string(service.FullName()) == serviceName {
+				serviceDescriptor = service
+				return false
+			}
 		}
-	}
+		return true
+	})
 
 	if serviceDescriptor == nil {
-		return nil, fmt.Errorf("no service with name %s where found", serviceName)
+		return nil, "", fmt.Errorf("no service with name %s where found", serviceName)
 	}
 
 	// Get the method
 	methodDescriptor := serviceDescriptor.Methods().ByName(protoreflect.Name(methodName))
 	if methodDescriptor == nil {
-		return nil, fmt.Errorf("no method with name %s where found in the service %s", methodName, serviceName)
+		return nil, "", fmt.Errorf("no method with name %s where found in the service %s", methodName, serviceName)
 	}
 
+	// Build the full method path
+	methodPath := fmt.Sprintf("/%s/%s", serviceDescriptor.FullName(), methodDescriptor.Name())
+	return methodDescriptor, methodPath, nil
+}
+
+// Fetch the file descriptors for each service present
+func (client *ReflectionClient) InvokeRpcServerStream(method protoreflect.MethodDescriptor, methodPath string, input any) (grpc.ClientStream, error) {
 	streamDescriptor := grpc.StreamDesc{
-		StreamName:    string(methodDescriptor.Name()),
-		ServerStreams: methodDescriptor.IsStreamingServer(),
-		ClientStreams: methodDescriptor.IsStreamingClient(),
+		StreamName:    string(method.Name()),
+		ServerStreams: method.IsStreamingServer(),
+		ClientStreams: method.IsStreamingClient(),
 	}
 
 	// Prepare the stream
 	ctx, cancel := context.WithCancel(context.Background())
-	requestName := fmt.Sprintf("/%s/%s", serviceDescriptor.FullName(), methodDescriptor.Name())
-	stream, err := client.connection.NewStream(ctx, &streamDescriptor, requestName)
+	stream, err := client.connection.NewStream(ctx, &streamDescriptor, methodPath)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("could not create stream with request %s: %w", requestName, err)
+		return nil, fmt.Errorf("could not create stream with request %s: %w", methodPath, err)
 	}
 
 	// When the new stream is finished, also cleanup the parent context
@@ -198,13 +208,11 @@ func (client *ReflectionClient) InvokeRpcServerStream(serviceName, methodName st
 		cancel()
 	}()
 
-	// Build the dynamic message and send the first message
-	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
-	outputMessage := dynamicpb.NewMessage(methodDescriptor.Output())
-	err = stream.SendMsg(inputMessage)
+	// Send the first message and close since this method is for server side streaming
+	err = stream.SendMsg(input)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("could not send message %s: %w", inputMessage, err)
+		return nil, fmt.Errorf("could not send message %s: %w", input, err)
 	}
 	err = stream.CloseSend()
 	if err != nil {
@@ -212,18 +220,21 @@ func (client *ReflectionClient) InvokeRpcServerStream(serviceName, methodName st
 		return nil, fmt.Errorf("could not close send on stream %s: %w", stream, err)
 	}
 
-	err = stream.RecvMsg(outputMessage)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("could not receive message %s: %w", outputMessage, err)
+	return stream, nil
+}
+
+// Build a string representing a field's kind
+func FormatFieldDescriptorKind(fieldDescriptor protoreflect.FieldDescriptor) string {
+	kind := fieldDescriptor.Kind().String()
+	if fieldDescriptor.Kind() == protoreflect.MessageKind {
+		kind = string(fieldDescriptor.Message().FullName())
+	} else if fieldDescriptor.IsList() {
+		kind = fmt.Sprintf("[]%s", kind)
+	} else if fieldDescriptor.IsMap() {
+		kind = fmt.Sprintf("map[%s]%s", FormatFieldDescriptorKind(fieldDescriptor.MapKey()), FormatFieldDescriptorKind(fieldDescriptor.MapValue()))
 	}
 
-	formattedOutput := map[string]protoreflect.Value{}
-	outputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
-		formattedOutput[fieldDescriptor.TextName()] = value
-		return true
-	})
-	return formattedOutput, nil
+	return kind
 }
 
 // Create a client that wil fetch all the available methods and offer and interface to call them

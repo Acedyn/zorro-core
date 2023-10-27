@@ -1,14 +1,35 @@
 package scheduling
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/Acedyn/zorro-core/internal/processor"
 	"github.com/Acedyn/zorro-core/internal/tools"
 
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
+	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/dynamicpb"
 )
+
+var (
+	processorPoolLock = &sync.Mutex{}
+	processorPool     map[string]*RegisteredProcessor
+	once              sync.Once
+)
+
+// Getter for the clients pool singleton
+func ProcessorPool() map[string]*RegisteredProcessor {
+	once.Do(func() {
+		processorPool = map[string]*RegisteredProcessor{}
+	})
+
+	return processorPool
+}
 
 // Registered processors are ready to receive command requests
 type RegisteredProcessor struct {
@@ -24,19 +45,70 @@ type RegisteredProcessor struct {
 	Client *ReflectionClient
 }
 
-var (
-	processorPoolLock = &sync.Mutex{}
-	processorPool     map[string]*RegisteredProcessor
-	once              sync.Once
-)
+// Send a grpc query to the processor to execute the command request
+func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQuery) error {
+	// Get the method descriptor that correspond to the command request
+	methodDescriptor, methodPath, err := processor.Client.GetdMethodDescriptor(commandQuery.Command.Base.GetName(), string(commandQuery.ExecutionType))
+	if err != nil {
+		return fmt.Errorf("could not find method with processor at host %s: %w", processor.Host, err)
+	}
 
-// Getter for the clients pool singleton
-func ProcessorPool() map[string]*RegisteredProcessor {
-	once.Do(func() {
-		processorPool = map[string]*RegisteredProcessor{}
+	// Build the input message using the command's input sockets
+	missingKeys := []string{}
+	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
+	inputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+		if socket, ok := commandQuery.Command.Base.Inputs[fieldDescriptor.TextName()]; ok {
+			tools_proto.Socket
+			switch raw := socket.Raw.(type) {
+			case *tools_proto.Socket_RawBinary:
+				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfBytes(raw.RawBinary))
+			case *tools_proto.Socket_RawString:
+				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfString(raw.RawString))
+			case *tools_proto.Socket_RawInteger:
+				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfInt32(raw.RawInteger))
+			case *tools_proto.Socket_RawNumber:
+				// TODO: I don't remember why tf I named it RawNumber, rename it to RawFloat
+				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfFloat32(raw.RawNumber))
+			}
+		} else {
+			missingKeys = append(missingKeys, fieldDescriptor.TextName())
+			return false
+		}
+		return true
 	})
 
-	return processorPool
+	if len(missingKeys) > 0 {
+		return fmt.Errorf("missing input values for method %s: %s", methodDescriptor.FullName(), missingKeys)
+	}
+
+	// Start the stream and send the input message
+	stream, err := processor.Client.InvokeRpcServerStream(methodDescriptor, methodPath, inputMessage)
+	if err != nil {
+		return fmt.Errorf("an error occured when invoking method with processor at host %s: %w", processor.Host, err)
+	}
+
+	for {
+		outputMessage := dynamicpb.NewMessage(methodDescriptor.Output())
+		err = stream.RecvMsg(outputMessage)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
+		}
+
+		// TODO: The processing of the method returned value should be in a different package
+		outputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+			kind := FormatFieldDescriptorKind(fieldDescriptor)
+			commandQuery.Command.Base.Outputs[fieldDescriptor.TextName()] = &tools_proto.Socket{
+				// TODO: Get the raw value
+				Cast: kind,
+			}
+			return true
+		})
+	}
+
+	return nil
 }
 
 // Register the given client to the client pool
