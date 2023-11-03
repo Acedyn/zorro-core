@@ -11,6 +11,7 @@ import (
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	context_proto "github.com/Acedyn/zorro-proto/zorroprotos/context"
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
+	"github.com/google/uuid"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
 )
@@ -97,6 +98,7 @@ func NewContext(pluginQuery []string, customConfig *config_proto.Config) (*Conte
 
 	return &Context{
 		Context: &context_proto.Context{
+			Id:      uuid.New().String(),
 			Plugins: slices.Map(resolvedPlugins, func(p *plugin.Plugin) *plugin_proto.Plugin { return p.Plugin }),
 		},
 	}, nil

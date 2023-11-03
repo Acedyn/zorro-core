@@ -1,4 +1,4 @@
-package scheduling
+package reflection
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"github.com/life4/genesis/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	grpc_reflection "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -17,26 +16,11 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
+// Client that discovers the available gRPC method and invoke them
 type ReflectionClient struct {
 	reflectionStub grpc_reflection.ServerReflectionClient
 	registry       *protoregistry.Files
 	connection     grpc.ClientConnInterface
-}
-
-// Recursive function to gather all the descriptors of a message type
-func gatherEmbededMessageDescriptors(messageDescriptors map[string]*descriptorpb.DescriptorProto, messageDescriptor *descriptorpb.DescriptorProto) {
-	messageDescriptors[messageDescriptor.GetName()] = messageDescriptor
-	for _, embedMessage := range messageDescriptor.GetNestedType() {
-		gatherEmbededMessageDescriptors(messageDescriptors, embedMessage)
-	}
-}
-
-func (client *ReflectionClient) CallStream(descriptor protoreflect.MethodDescriptor) {
-	// sd := grpc.StreamDesc{
-	// 	StreamName:    string(descriptor.Name()),
-	// 	ServerStreams: descriptor.IsStreamingServer(),
-	// 	ClientStreams: descriptor.IsStreamingClient(),
-	// }
 }
 
 // Send a request to the reflection service
@@ -124,7 +108,7 @@ func (client *ReflectionClient) ListFileDescriptors() ([]*descriptorpb.FileDescr
 	return fileDescriptors, nil
 }
 
-func (client *ReflectionClient) fetchFullServiceDescriptors() error {
+func (client *ReflectionClient) registerFileDescriptors() error {
 	fileList, err := client.ListFileDescriptors()
 	if err != nil {
 		return fmt.Errorf("could not get file descriptors: %w", err)
@@ -223,22 +207,8 @@ func (client *ReflectionClient) InvokeRpcServerStream(method protoreflect.Method
 	return stream, nil
 }
 
-// Build a string representing a field's kind
-func FormatFieldDescriptorKind(fieldDescriptor protoreflect.FieldDescriptor) string {
-	kind := fieldDescriptor.Kind().String()
-	if fieldDescriptor.Kind() == protoreflect.MessageKind {
-		kind = string(fieldDescriptor.Message().FullName())
-	} else if fieldDescriptor.IsList() {
-		kind = fmt.Sprintf("[]%s", kind)
-	} else if fieldDescriptor.IsMap() {
-		kind = fmt.Sprintf("map[%s]%s", FormatFieldDescriptorKind(fieldDescriptor.MapKey()), FormatFieldDescriptorKind(fieldDescriptor.MapValue()))
-	}
-
-	return kind
-}
-
 // Create a client that wil fetch all the available methods and offer and interface to call them
-func NewReflectedClient(host string) (*ReflectionClient, error) {
+func NewReflectedClient(host, contextId string) (*ReflectionClient, error) {
 	// Establish the grpc connection with the new processor
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -247,7 +217,7 @@ func NewReflectedClient(host string) (*ReflectionClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create connection with processor at host %s: %w", host, err)
 	}
-	client := grpc_reflection_v1alpha.NewServerReflectionClient(connection)
+	client := grpc_reflection.NewServerReflectionClient(connection)
 
 	// Create the reflected client
 	reflectedClient := &ReflectionClient{
@@ -255,7 +225,7 @@ func NewReflectedClient(host string) (*ReflectionClient, error) {
 		connection:     connection,
 	}
 	// Fetch all the available methods
-	err = reflectedClient.fetchFullServiceDescriptors()
+	err = reflectedClient.registerFileDescriptors()
 	if err != nil {
 		return nil, fmt.Errorf("Could not initialize reflected client: %w", err)
 	}

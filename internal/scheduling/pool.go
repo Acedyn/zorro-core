@@ -1,17 +1,16 @@
 package scheduling
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sync"
 
 	"github.com/Acedyn/zorro-core/internal/processor"
+	"github.com/Acedyn/zorro-core/internal/reflection"
 	"github.com/Acedyn/zorro-core/internal/tools"
 
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
@@ -42,7 +41,7 @@ type RegisteredProcessor struct {
 	runningCommands     map[string]*tools.Command
 	runningCommandsLock *sync.Mutex
 	// The client used to send command requests
-	Client *ReflectionClient
+	Client *reflection.ReflectionClient
 }
 
 // Send a grpc query to the processor to execute the command request
@@ -53,33 +52,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 		return fmt.Errorf("could not find method with processor at host %s: %w", processor.Host, err)
 	}
 
-	// Build the input message using the command's input sockets
-	missingKeys := []string{}
-	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
-	inputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
-		if socket, ok := commandQuery.Command.Base.Inputs[fieldDescriptor.TextName()]; ok {
-			tools_proto.Socket
-			switch raw := socket.Raw.(type) {
-			case *tools_proto.Socket_RawBinary:
-				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfBytes(raw.RawBinary))
-			case *tools_proto.Socket_RawString:
-				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfString(raw.RawString))
-			case *tools_proto.Socket_RawInteger:
-				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfInt32(raw.RawInteger))
-			case *tools_proto.Socket_RawNumber:
-				// TODO: I don't remember why tf I named it RawNumber, rename it to RawFloat
-				inputMessage.Set(fieldDescriptor, protoreflect.ValueOfFloat32(raw.RawNumber))
-			}
-		} else {
-			missingKeys = append(missingKeys, fieldDescriptor.TextName())
-			return false
-		}
-		return true
-	})
-
-	if len(missingKeys) > 0 {
-		return fmt.Errorf("missing input values for method %s: %s", methodDescriptor.FullName(), missingKeys)
-	}
+	inputMessage, err = reflection.BuildCommandMethodMessage(methodDescriptor, commandQuery.Command.Base.Input)
 
 	// Start the stream and send the input message
 	stream, err := processor.Client.InvokeRpcServerStream(methodDescriptor, methodPath, inputMessage)
@@ -99,7 +72,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 
 		// TODO: The processing of the method returned value should be in a different package
 		outputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
-			kind := FormatFieldDescriptorKind(fieldDescriptor)
+			kind := reflection.FormatFieldDescriptorKind(fieldDescriptor)
 			commandQuery.Command.Base.Outputs[fieldDescriptor.TextName()] = &tools_proto.Socket{
 				// TODO: Get the raw value
 				Cast: kind,

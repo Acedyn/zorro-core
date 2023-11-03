@@ -6,6 +6,7 @@ import (
 
 	"github.com/Acedyn/zorro-core/internal/network"
 	"github.com/Acedyn/zorro-core/internal/processor"
+	"github.com/Acedyn/zorro-core/internal/reflection"
 	"github.com/Acedyn/zorro-core/internal/tools"
 
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
@@ -19,7 +20,7 @@ type schedulingServer struct {
 // As soon as a processor starts, it has to registers itself
 func (service *schedulingServer) RegisterProcessor(c context.Context, processorRegistration *scheduling_proto.ProcessorRegistration) (*processor_proto.Processor, error) {
 	// TODO: Handle closing the connection when the processor deregisters
-	reflectedClient, err := NewReflectedClient(processorRegistration.GetHost())
+	reflectedClient, err := reflection.NewReflectedClient(processorRegistration.GetHost())
 	if err != nil {
 		registrationErr := fmt.Errorf("could not create reflection client with processor at host %s: %w", processorRegistration.GetHost(), err)
 		if pendingProcessor := processor.UnQueueProcessor(processorRegistration.Processor.GetId()); pendingProcessor != nil {
