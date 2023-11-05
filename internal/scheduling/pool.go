@@ -11,7 +11,6 @@ import (
 
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -46,13 +45,19 @@ type RegisteredProcessor struct {
 
 // Send a grpc query to the processor to execute the command request
 func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQuery) error {
+  commandBase := commandQuery.Command.GetBase()
 	// Get the method descriptor that correspond to the command request
-	methodDescriptor, methodPath, err := processor.Client.GetdMethodDescriptor(commandQuery.Command.Base.GetName(), string(commandQuery.ExecutionType))
+	methodDescriptor, methodPath, err := processor.Client.GetdMethodDescriptor(commandBase.GetName(), string(commandQuery.ExecutionType))
 	if err != nil {
 		return fmt.Errorf("could not find method with processor at host %s: %w", processor.Host, err)
 	}
 
-	inputMessage, err = reflection.BuildCommandMethodMessage(methodDescriptor, commandQuery.Command.Base.Input)
+	// Apply the socket value to the input message
+	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
+  err = commandBase.GetInput().ApplyValueToMessage(inputMessage)
+	if err != nil {
+		return fmt.Errorf("could not build input message for method %s: %w", methodDescriptor.FullName(), err)
+	}
 
 	// Start the stream and send the input message
 	stream, err := processor.Client.InvokeRpcServerStream(methodDescriptor, methodPath, inputMessage)
@@ -60,6 +65,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 		return fmt.Errorf("an error occured when invoking method with processor at host %s: %w", processor.Host, err)
 	}
 
+  // Get and apply the outputs in real time
 	for {
 		outputMessage := dynamicpb.NewMessage(methodDescriptor.Output())
 		err = stream.RecvMsg(outputMessage)
@@ -70,22 +76,22 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
 		}
 
-		// TODO: The processing of the method returned value should be in a different package
-		outputMessage.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
-			kind := reflection.FormatFieldDescriptorKind(fieldDescriptor)
-			commandQuery.Command.Base.Outputs[fieldDescriptor.TextName()] = &tools_proto.Socket{
-				// TODO: Get the raw value
-				Cast: kind,
-			}
-			return true
-		})
+    // The output might be nil
+    if commandBase.Output == nil {
+      commandBase.Output = &tools_proto.Socket{}
+    }
+    err := commandBase.GetOutput().UpdateWithMessage(outputMessage)
+
+		if err != nil {
+			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
+		}
 	}
 
 	return nil
 }
 
 // Register the given client to the client pool
-func registerProcessor(processorToRegister *processor.Processor, host string, client *ReflectionClient) *RegisteredProcessor {
+func registerProcessor(processorToRegister *processor.Processor, host string, client *reflection.ReflectionClient) *RegisteredProcessor {
 	// Check if the client is already registered
 	processorPoolLock.Lock()
 	defer processorPoolLock.Unlock()

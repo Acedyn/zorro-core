@@ -21,7 +21,18 @@ type TraversableTool interface {
 	Traverse(func(TraversableTool) error) error
 }
 
-func (tool *ToolBase) Patch(patch *ToolBase) bool {
+
+// Get the wrapped output with all its methods
+func (tool *ToolBase) GetOutput() *Socket {
+	return &Socket{tool.ToolBase.GetOutput()}
+}
+
+// Get the wrapped inputt with all its methods
+func (tool *ToolBase) GetInput() *Socket {
+	return &Socket{tool.ToolBase.GetOutput()}
+}
+
+func (tool *ToolBase) Update(patch *ToolBase) bool {
 	// Patch the local version of the tool
 	isPatched := false
 
@@ -37,6 +48,7 @@ func (tool *ToolBase) Patch(patch *ToolBase) bool {
 		tool.Tooltip = patch.Tooltip
 		isPatched = true
 	}
+
 	// Logs are a special case, they are combined together
 	maps.Update(tool.Logs, patch.GetLogs())
 

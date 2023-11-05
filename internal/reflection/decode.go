@@ -1,5 +1,6 @@
 // This code is copied from https://github.com/protocolbuffers/protobuf-go/tree/master
-// due to private functions that are needed for field unmarshalling
+// due to private functions that are needed for field unmarshalling.
+// Couldn't find any other way sadly
 
 // Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
@@ -18,13 +19,13 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var errUnknown error = fmt.Errorf("")
-var errDecode error = fmt.Errorf("")
+var errUnknown error = fmt.Errorf("unknown datatype when decoding raw proto value")
+var errDecode error = fmt.Errorf("could not decode raw proto value")
 
 // unmarshalScalar decodes a value of the given kind.
 //
 // Message values are decoded into a []byte which aliases the input data.
-func unmarshalScalar(b []byte, wtyp protowire.Type, fd protoreflect.FieldDescriptor) (val protoreflect.Value, n int, err error) {
+func UnmarshalScalar(b []byte, wtyp protowire.Type, fd protoreflect.FieldDescriptor) (val protoreflect.Value, n int, err error) {
 	switch fd.Kind() {
 	case protoreflect.BoolKind:
 		if wtyp != protowire.VarintType {
@@ -193,7 +194,7 @@ func unmarshalScalar(b []byte, wtyp protowire.Type, fd protoreflect.FieldDescrip
 	}
 }
 
-func unmarshalList(b []byte, wtyp protowire.Type, list protoreflect.List, fd protoreflect.FieldDescriptor) (n int, err error) {
+func UnmarshalList(b []byte, wtyp protowire.Type, list protoreflect.List, fd protoreflect.FieldDescriptor) (n int, err error) {
 	switch fd.Kind() {
 	case protoreflect.BoolKind:
 		if wtyp == protowire.BytesType {
@@ -598,7 +599,7 @@ func unmarshalList(b []byte, wtyp protowire.Type, list protoreflect.List, fd pro
 	}
 }
 
-func unmarshalMap(b []byte, wtyp protowire.Type, mapv protoreflect.Map, fd protoreflect.FieldDescriptor) (n int, err error) {
+func UnmarshalMap(b []byte, wtyp protowire.Type, mapv protoreflect.Map, fd protoreflect.FieldDescriptor) (n int, err error) {
 	if wtyp != protowire.BytesType {
 		return 0, errUnknown
 	}
@@ -632,14 +633,14 @@ func unmarshalMap(b []byte, wtyp protowire.Type, mapv protoreflect.Map, fd proto
 		err = errUnknown
 		switch num {
 		case 1:
-			key, n, err = unmarshalScalar(b, wtyp, keyField)
+			key, n, err = UnmarshalScalar(b, wtyp, keyField)
 			if err != nil {
 				break
 			}
 			haveKey = true
 		case 2:
 			var v protoreflect.Value
-			v, n, err = unmarshalScalar(b, wtyp, valField)
+			v, n, err = UnmarshalScalar(b, wtyp, valField)
 			if err != nil {
 				break
 			}
