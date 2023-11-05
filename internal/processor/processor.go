@@ -77,7 +77,6 @@ func (processor Processor) Start(
 	processorQueueLock.Lock()
 	ProcessorQueue()[pendingProcessor.GetId()] = pendingProcessor
 	processorQueueLock.Unlock()
-	fmt.Println(splittedCommand)
 
 	// Wait for the command to end so we can get the output code
 	commandResult := make(chan error)
