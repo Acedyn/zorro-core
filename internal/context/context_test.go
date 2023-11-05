@@ -1,7 +1,6 @@
 package context
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -66,7 +65,7 @@ func TestEnviron(t *testing.T) {
 		}, string(filepath.ListSeparator)),
     "BAZ": "plugin-b",
 	}
-	fmt.Println(resolvedEnviron)
+
 	for key, environ := range expectedEnviron {
 		if !slices.Contains(resolvedEnviron, key + "=" + environ) {
 			t.Errorf("No resolved environ matched the expected environ %q", environ)

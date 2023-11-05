@@ -52,11 +52,11 @@ func TestLoadPluginBare(t *testing.T) {
 	plugin := GetPluginBare(pluginPath)
 
 	if plugin.Name != "bar" {
-		t.Errorf("invalid bare plugin's name loaded: %s", plugin.Name)
+		t.Errorf("Invalid bare plugin's name loaded: %s", plugin.Name)
 	}
 
 	if plugin.Version != "1.2" {
-		t.Errorf("invalid bare plugin's version loaded: %s", plugin.Version)
+		t.Errorf("Invalid bare plugin's version loaded: %s", plugin.Version)
 	}
 }
 
@@ -91,7 +91,7 @@ var loadPluginFromFileTests = map[string]*loadPluginFromFileTest{
 func TestLoadPluginFromFile(t *testing.T) {
 	cwdPath, err := os.Getwd()
 	if err != nil {
-		t.Errorf("could not get the current working directory\n\t%s", err)
+		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 
@@ -99,35 +99,35 @@ func TestLoadPluginFromFile(t *testing.T) {
 		fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins", path)
 		loadedPlugin, err := GetPluginFromFile(fullPath)
 		if err != nil {
-			t.Errorf("an error occured while loading the plugin at path %s\n\t%s", path, err)
+			t.Errorf("An error occured while loading the plugin at path %s\n\t%s", path, err)
 			return
 		}
 
 		if loadedPlugin.GetName() != expectedPlugin.ExpectedName {
-			t.Errorf("incorrect name loaded on the plugin at path %s (%s)", path, loadedPlugin.GetName())
+			t.Errorf("Incorrect name loaded on the plugin at path %s (%s)", path, loadedPlugin.GetName())
 			return
 		}
 		if loadedPlugin.GetLabel() != expectedPlugin.ExpectedLabel {
-			t.Errorf("incorrect label loaded on the plugin at path %s (%s)", path, loadedPlugin.GetLabel())
+			t.Errorf("Incorrect label loaded on the plugin at path %s (%s)", path, loadedPlugin.GetLabel())
 			return
 		}
 		for index := range loadedPlugin.GetTools().Commands {
 			expectedCommand := filepath.Join(filepath.Dir(fullPath), expectedPlugin.ExpectedCommands[index])
 			if loadedPlugin.GetTools().Commands[index].GetPath() != expectedCommand {
-				t.Errorf("incorrect command loaded on the plugin at path %s (%s)", path, loadedPlugin.GetTools().Commands[index])
+				t.Errorf("Incorrect command loaded on the plugin at path %s (%s)", path, loadedPlugin.GetTools().Commands[index])
 				return
 			}
 		}
 		for index := range loadedPlugin.GetTools().Actions {
 			expectedAction := filepath.Join(filepath.Dir(fullPath), expectedPlugin.ExpectedActions[index])
 			if loadedPlugin.GetTools().Actions[index].GetPath() != expectedAction {
-				t.Errorf("incorrect action loaded on the plugin at path %s (%s)", path, loadedPlugin.GetTools().Actions[index])
+				t.Errorf("Incorrect action loaded on the plugin at path %s (%s)", path, loadedPlugin.GetTools().Actions[index])
 				return
 			}
 		}
 		for index := range loadedPlugin.GetRequire() {
 			if loadedPlugin.GetRequire()[index] != expectedPlugin.ExpectedRequire[index] {
-				t.Errorf("incorrect require loaded on the plugin at path %s (%s)", path, loadedPlugin.GetRequire()[index])
+				t.Errorf("Incorrect require loaded on the plugin at path %s (%s)", path, loadedPlugin.GetRequire()[index])
 				return
 			}
 		}
