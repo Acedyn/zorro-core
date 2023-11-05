@@ -208,7 +208,7 @@ func (client *ReflectionClient) InvokeRpcServerStream(method protoreflect.Method
 }
 
 // Create a client that wil fetch all the available methods and offer and interface to call them
-func NewReflectedClient(host, contextId string) (*ReflectionClient, error) {
+func NewReflectedClient(host string) (*ReflectionClient, error) {
 	// Establish the grpc connection with the new processor
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))

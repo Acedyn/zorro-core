@@ -94,10 +94,10 @@ func (command *Command) Test(c *context.Context) error {
 }
 
 // Update the command with a patch
-func (command *Command) Patch(patch *Command) bool {
+func (command *Command) Update(patch *Command) bool {
 	// Patch the local version of the command
 	isPatched := false
-	if command.GetBase().Patch(patch.GetBase()) {
+	if command.GetBase().Update(patch.GetBase()) {
 		isPatched = true
 	}
 

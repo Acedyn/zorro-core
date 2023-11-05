@@ -125,7 +125,7 @@ func (processor *Processor) buildCommand(commandsPaths []string) (string, error)
 }
 
 // Update the processor with a patch
-func (processor *Processor) Patch(patch *Processor) bool {
+func (processor *Processor) Update(patch *Processor) bool {
 	// Patch the local version of the client
 	isPatched := false
 	if maps.Equal(processor.Metadata, patch.GetMetadata()) {
