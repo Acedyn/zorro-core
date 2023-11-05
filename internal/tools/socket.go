@@ -67,23 +67,25 @@ func (socket *Socket) UpdateWithMessage(message protoreflect.Message) error {
 
 // Update the socket's raw data with a message field
 func (socket *Socket) UpdateWithField(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) error {
-  socketRawValue := []byte{}
-  var err error = nil
+  rawValue := []byte{}
 
-	switch {
-	case fieldDescriptor.IsList():
-    socketRawValue, err = reflection.MarshalList(socketRawValue, fieldDescriptor, value.List())
-	case fieldDescriptor.IsMap():
-		socketRawValue, err = reflection.MarshalMap(socketRawValue, fieldDescriptor, value.Map())
-	default:
-		socketRawValue = protowire.AppendTag(socketRawValue, fieldDescriptor.Number(), reflection.WireTypes[fieldDescriptor.Kind()])
-		socketRawValue, err = reflection.MarshalSingular(socketRawValue, fieldDescriptor, value)
-	}
-
-  socket.Value = &tools_proto.Socket_Raw{
-    Raw: socketRawValue,
+  rawValue, err := reflection.MarshalField(&proto.MarshalOptions{}, rawValue, fieldDescriptor, value)
+  if err != nil {
+    return fmt.Errorf("an error occured while marshalling the socket %s: %w", socket, err)
   }
-  return err
+
+  // The wire type is used for unmarshall the raw value later
+  wireType, ok := reflection.WireTypes[fieldDescriptor.Kind()]
+  if !ok {
+    return fmt.Errorf("the field of kind %s does not have associated wire type", fieldDescriptor.Kind())
+  }
+
+  socket.Wtyp = int32(wireType)
+  socket.Kind = formatFieldDescriptorKind(fieldDescriptor)
+  socket.Value = &tools_proto.Socket_Raw{
+    Raw: rawValue,
+  }
+  return nil
 }
 
 // Apply the socket's values to a message
@@ -131,24 +133,23 @@ func (socket *Socket) ApplyValueToMessage(message protoreflect.Message) error {
 // Apply the socket's field value to a message field
 func (socket *Socket) ApplyValueToField(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value, message protoreflect.Message) error {
 	// Resolve the raw value to apply
-	socketRawValue, err := socket.ResolveRawValue()
+	rawValue, err := socket.ResolveRawValue()
 	if err != nil {
 		return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
 	}
+
+  unmarshalOptions := &proto.UnmarshalOptions{}
 
 	// Apply the value according to the expected data type
 	switch {
 	case fieldDescriptor.Kind() == protoreflect.GroupKind || fieldDescriptor.Kind() == protoreflect.MessageKind:
 		err = socket.ApplyValueToMessage(value.Message())
 	case fieldDescriptor.IsList():
-		_, err = reflection.UnmarshalList(socketRawValue, protowire.Type(socket.GetWtyp()), message.Mutable(fieldDescriptor).List(), fieldDescriptor)
+		_, err = reflection.UnmarshalList(unmarshalOptions, rawValue, protowire.Type(socket.GetWtyp()), message.Mutable(fieldDescriptor).List(), fieldDescriptor)
 	case fieldDescriptor.IsMap():
-		_, err = reflection.UnmarshalMap(socketRawValue, protowire.Type(socket.GetWtyp()), message.Mutable(fieldDescriptor).Map(), fieldDescriptor)
+		_, err = reflection.UnmarshalMap(unmarshalOptions, rawValue, protowire.Type(socket.GetWtyp()), message.Mutable(fieldDescriptor).Map(), fieldDescriptor)
 	default:
-		value, _, err := reflection.UnmarshalScalar(socketRawValue, protowire.Type(socket.GetWtyp()), fieldDescriptor)
-		if err == nil {
-			message.Set(fieldDescriptor, value)
-		}
+		_, err = reflection.UnmarshalSingular(unmarshalOptions, rawValue, protowire.Type(socket.GetWtyp()), message, fieldDescriptor)
 	}
 
 	return err
