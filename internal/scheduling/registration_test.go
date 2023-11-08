@@ -38,8 +38,7 @@ var contextTest = context.Context{
 var processorQueryTests = []*ProcessorQuery{
 	{
 		ProcessorQuery: &scheduling_proto.ProcessorQuery{
-			Name:    &[]string{"bash"}[0],
-			Context: contextTest.Context,
+			Name: &[]string{"bash"}[0],
 		},
 	},
 	{
@@ -91,7 +90,7 @@ func TestGetOrStartProcessor(t *testing.T) {
 	}
 
 	for _, processorQueryTest := range processorQueryTests {
-		_, err := GetOrStartProcessor(processorQueryTest)
+		_, err := GetOrStartProcessor(&contextTest, processorQueryTest)
 		if err != nil {
 			t.Errorf("An error occured while getting client from query %s: %s", processorQueryTest, err.Error())
 			return

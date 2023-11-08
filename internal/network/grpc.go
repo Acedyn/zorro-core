@@ -43,7 +43,7 @@ func ServeGrpc(host string, port int) error {
 	status.IsRunning = true
 
 	if err = server.Serve(listener); err != nil {
-		return fmt.Errorf("failed to server grpc: %w", err)
+		return fmt.Errorf("failed to serve grpc: %w", err)
 	}
 
 	status.IsRunning = false
