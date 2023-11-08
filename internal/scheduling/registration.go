@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/processor"
 	"github.com/Acedyn/zorro-core/internal/reflection"
 	"github.com/Acedyn/zorro-core/internal/tools"
@@ -44,8 +45,8 @@ type RegisteredProcessor struct {
 }
 
 // Send a grpc query to the processor to execute the command request
-func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQuery) error {
-  commandBase := commandQuery.Command.GetBase()
+func (processor *RegisteredProcessor) ProcessCommand(commandQuery *tools.CommandQuery) error {
+	commandBase := commandQuery.Command.GetBase()
 	// Get the method descriptor that correspond to the command request
 	methodDescriptor, methodPath, err := processor.Client.GetdMethodDescriptor(commandBase.GetName(), string(commandQuery.ExecutionType))
 	if err != nil {
@@ -54,7 +55,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 
 	// Apply the socket value to the input message
 	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
-  err = commandBase.GetInput().ApplyValueToMessage(inputMessage)
+	err = commandBase.GetInput().ApplyValueToMessage(inputMessage)
 	if err != nil {
 		return fmt.Errorf("could not build input message for method %s: %w", methodDescriptor.FullName(), err)
 	}
@@ -65,7 +66,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 		return fmt.Errorf("an error occured when invoking method with processor at host %s: %w", processor.Host, err)
 	}
 
-  // Get and apply the outputs in real time
+	// Get and apply the outputs in real time
 	for {
 		outputMessage := dynamicpb.NewMessage(methodDescriptor.Output())
 		err = stream.RecvMsg(outputMessage)
@@ -76,11 +77,11 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery tools.CommandQ
 			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
 		}
 
-    // The output might be nil
-    if commandBase.Output == nil {
-      commandBase.Output = &tools_proto.Socket{}
-    }
-    err := commandBase.GetOutput().UpdateWithMessage(outputMessage)
+		// The output might be nil
+		if commandBase.Output == nil {
+			commandBase.Output = &tools_proto.Socket{}
+		}
+		err := commandBase.GetOutput().UpdateWithMessage(outputMessage)
 
 		if err != nil {
 			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
@@ -136,19 +137,24 @@ func findRegisteredProcessor(query *ProcessorQuery) *RegisteredProcessor {
 }
 
 // Get an already running processor or start a new one from the query
-func GetOrStartProcessor(query *ProcessorQuery) (*RegisteredProcessor, error) {
+func GetOrStartProcessor(c *context.Context, query *ProcessorQuery) (*RegisteredProcessor, error) {
 	// First find a potential running processors that matches the query
 	if registeredClient := findRegisteredProcessor(query); registeredClient != nil {
 		return registeredClient, nil
 	}
 
 	// If no running processors matches the query, try to start a new one
-	for _, availableProcessor := range query.GetContext().AvailableProcessors() {
+	for _, availableProcessor := range c.AvailableProcessors() {
 		if availableProcessor.GetName() == query.GetName() {
-			pendingProcessor, err := availableProcessor.Start(query.GetMetadata(), query.GetContext().Environ(true), query.GetContext().AvailableCommandPaths(availableProcessor))
+			pendingProcessor, err := availableProcessor.Start(
+				query.GetMetadata(),
+				c.Environ(true),
+				c.AvailableCommandPaths(availableProcessor),
+			)
 			if err != nil {
 				return nil, fmt.Errorf("could not start new processor (%s): %w", availableProcessor, err)
 			}
+
 			// The client should now be registered
 			registeredProcessor := findRegisteredProcessor(&ProcessorQuery{
 				ProcessorQuery: &scheduling_proto.ProcessorQuery{

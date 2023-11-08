@@ -42,7 +42,14 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 func ListenCommandQueries() {
 	for commandQuery := range tools.CommandQueue() {
 		processorQuery := ProcessorQuery{ProcessorQuery: commandQuery.Command.GetProcessorQuery()}
-		_, err := GetOrStartProcessor(&processorQuery)
+		// Get the processor that will execute the command query
+		registeredProcessor, err := GetOrStartProcessor(commandQuery.Context, &processorQuery)
+		if err != nil {
+			commandQuery.Result <- err
+		}
+
+		// Execute the command query
+		err = registeredProcessor.ProcessCommand(commandQuery)
 		if err != nil {
 			commandQuery.Result <- err
 		}
