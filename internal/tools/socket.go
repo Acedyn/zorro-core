@@ -24,6 +24,14 @@ func (socket *Socket) GetFields() map[string]*Socket {
 	})
 }
 
+// Safe setter for the Field field
+func (socket *Socket) SetField(key string, value *Socket) {
+	if socket.Socket.GetFields() == nil {
+		socket.Socket.Fields = map[string]*tools_proto.Socket{}
+	}
+	socket.Socket.GetFields()[key] = value.Socket
+}
+
 // Update the command with a patch
 func (socket *Socket) Update(patch *Socket) bool {
 	// Patch the local version of the socket
@@ -47,45 +55,53 @@ func (socket *Socket) UpdateWithMessage(message protoreflect.Message) error {
 		return fmt.Errorf("could not store raw message %s: %w", message, err)
 	}
 
-  // Set the raw value first
-  socket.Wtyp = int32(protowire.BytesType)
-  socket.Kind = string(message.Descriptor().FullName())
+	// Set the raw value first
+	socket.Kind = string(message.Descriptor().FullName())
 	socket.Value = &tools_proto.Socket_Raw{
 		Raw: rawMessage,
 	}
 
-  // Decompose the value into fields so they can be fetched separatly
-  message.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
-    fieldSocket := Socket{&tools_proto.Socket{}}
-    fieldSocket.UpdateWithField(fieldDescriptor, value)
-    socket.GetFields()[fieldDescriptor.TextName()] = &fieldSocket
-    return true
-  })
+	// Decompose the value into fields so they can be fetched separatly
+	messageDescriptor := message.Descriptor()
+	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
+		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
+		value := message.Get(fieldDescriptor)
 
+		// Here we set the value or the default value if the value is not there
+		fieldSocket := Socket{&tools_proto.Socket{}}
+		err = fieldSocket.UpdateWithField(fieldDescriptor, value)
+		if err != nil {
+			break
+		}
+
+		socket.SetField(fieldDescriptor.TextName(), &fieldSocket)
+	}
+
+	if err != nil {
+		return fmt.Errorf("an error occured when updating a field of socket %s: %w", socket, err)
+	}
 	return nil
 }
 
 // Update the socket's raw data with a message field
 func (socket *Socket) UpdateWithField(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) error {
-  rawValue := []byte{}
+	// If the value is a message then this function is recursive
+	// Maps a considered like messages but we want to treat only messages recursively
+	if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() {
+		return socket.UpdateWithMessage(value.Message())
+	}
 
-  rawValue, err := reflection.MarshalField(&proto.MarshalOptions{}, rawValue, fieldDescriptor, value)
-  if err != nil {
-    return fmt.Errorf("an error occured while marshalling the socket %s: %w", socket, err)
-  }
+	rawValue := []byte{}
+	rawValue, err := reflection.MarshalField(&proto.MarshalOptions{}, rawValue, fieldDescriptor, value)
+	if err != nil {
+		return fmt.Errorf("an error occured while marshalling the socket %s: %w", socket, err)
+	}
 
-  // The wire type is used for unmarshall the raw value later
-  wireType, ok := reflection.WireTypes[fieldDescriptor.Kind()]
-  if !ok {
-    return fmt.Errorf("the field of kind %s does not have associated wire type", fieldDescriptor.Kind())
-  }
-
-  socket.Wtyp = int32(wireType)
-  socket.Kind = formatFieldDescriptorKind(fieldDescriptor)
-  socket.Value = &tools_proto.Socket_Raw{
-    Raw: rawValue,
-  }
-  return nil
+	socket.Kind = formatFieldDescriptorKind(fieldDescriptor)
+	socket.Value = &tools_proto.Socket_Raw{
+		Raw: rawValue,
+	}
+	return nil
 }
 
 // Apply the socket's values to a message
@@ -93,7 +109,7 @@ func (socket *Socket) ApplyValueToMessage(message protoreflect.Message) error {
 	// The raw value is applied only if the socket has no fields, otherwise the fields
 	// take the priority and their value are applied instead
 	if len(socket.GetFields()) == 0 {
-		// First try to apply the raw value to the message
+		// Try to apply the raw value to the message
 		socketRawValue, err := socket.ResolveRawValue()
 		if err != nil {
 			return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
@@ -107,20 +123,23 @@ func (socket *Socket) ApplyValueToMessage(message protoreflect.Message) error {
 		// The socket has fields defined so we apply them instead of applying the raw value
 		var err error = nil
 		// Override the message's fields with the fields entries
-		message.Range(func(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) bool {
+		messageDescriptor := message.Descriptor()
+		for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
+			fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
+			value := message.Get(fieldDescriptor)
+
 			// Some fields might not be set and left with default value
 			fieldSocket, ok := socket.GetFields()[fieldDescriptor.TextName()]
 			if !ok {
-				return true
+				continue
 			}
 
 			// Set the value of that field individually
 			err = fieldSocket.ApplyValueToField(fieldDescriptor, value, message)
 			if err != nil {
-				return false
+				break
 			}
-			return true
-		})
+		}
 
 		if err != nil {
 			return fmt.Errorf("could not apply field value on socket %s: %w", socket, err)
@@ -138,18 +157,31 @@ func (socket *Socket) ApplyValueToField(fieldDescriptor protoreflect.FieldDescri
 		return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
 	}
 
-  unmarshalOptions := &proto.UnmarshalOptions{}
+	unmarshalOptions := &proto.UnmarshalOptions{RecursionLimit: protowire.DefaultRecursionLimit}
+	_, wtyp, tagLen := protowire.ConsumeTag(rawValue)
 
 	// Apply the value according to the expected data type
 	switch {
-	case fieldDescriptor.Kind() == protoreflect.GroupKind || fieldDescriptor.Kind() == protoreflect.MessageKind:
-		err = socket.ApplyValueToMessage(value.Message())
-	case fieldDescriptor.IsList():
-		_, err = reflection.UnmarshalList(unmarshalOptions, rawValue, protowire.Type(socket.GetWtyp()), message.Mutable(fieldDescriptor).List(), fieldDescriptor)
 	case fieldDescriptor.IsMap():
-		_, err = reflection.UnmarshalMap(unmarshalOptions, rawValue, protowire.Type(socket.GetWtyp()), message.Mutable(fieldDescriptor).Map(), fieldDescriptor)
+		_, err := reflection.UnmarshalMap(unmarshalOptions, rawValue[tagLen:], wtyp, message.Mutable(fieldDescriptor).Map(), fieldDescriptor)
+		if err != nil {
+			return fmt.Errorf("error occured while unmarshalling map field %s: %w", fieldDescriptor.FullName(), err)
+		}
+	case fieldDescriptor.IsList():
+		_, err := reflection.UnmarshalList(unmarshalOptions, rawValue[tagLen:], wtyp, message.Mutable(fieldDescriptor).List(), fieldDescriptor)
+		if err != nil {
+			return fmt.Errorf("error occured while unmarshalling list field %s: %w", fieldDescriptor.FullName(), err)
+		}
+	case fieldDescriptor.Message() != nil:
+		err = socket.ApplyValueToMessage(message.Mutable(fieldDescriptor).Message())
+		if err != nil {
+			return fmt.Errorf("error occured while unmarshalling message field %s: %w", fieldDescriptor.FullName(), err)
+		}
 	default:
-		_, err = reflection.UnmarshalSingular(unmarshalOptions, rawValue, protowire.Type(socket.GetWtyp()), message, fieldDescriptor)
+		_, err := reflection.UnmarshalSingular(unmarshalOptions, rawValue[tagLen:], wtyp, message, fieldDescriptor)
+		if err != nil {
+			return fmt.Errorf("error occured while unmarshalling singular field %s: %w", fieldDescriptor.FullName(), err)
+		}
 	}
 
 	return err
@@ -170,12 +202,12 @@ func (socket *Socket) ResolveRawValue() ([]byte, error) {
 // Build a string representing a field's kind
 func formatFieldDescriptorKind(fieldDescriptor protoreflect.FieldDescriptor) string {
 	kind := fieldDescriptor.Kind().String()
-	if fieldDescriptor.Kind() == protoreflect.MessageKind {
-		kind = string(fieldDescriptor.Message().FullName())
+	if fieldDescriptor.IsMap() {
+		kind = fmt.Sprintf("map[%s]%s", formatFieldDescriptorKind(fieldDescriptor.MapKey()), formatFieldDescriptorKind(fieldDescriptor.MapValue()))
 	} else if fieldDescriptor.IsList() {
 		kind = fmt.Sprintf("[]%s", kind)
-	} else if fieldDescriptor.IsMap() {
-		kind = fmt.Sprintf("map[%s]%s", formatFieldDescriptorKind(fieldDescriptor.MapKey()), formatFieldDescriptorKind(fieldDescriptor.MapValue()))
+	} else if fieldDescriptor.Kind() == protoreflect.MessageKind {
+		kind = string(fieldDescriptor.Message().FullName())
 	}
 
 	return kind
