@@ -1,20 +1,19 @@
 # Zorro core
 
-Zorro core is the main repository of the zorro ecosystem. It is responsible for executing code
-on various clients like Unreal or Nuke.
+Zorro core is the main repository of the zorro ecosystem. It is responsible for sending code execution
+request to various processors like Python, Nodejs, even Unreal or Nuke.
 
-## How it works
+## What does it do
 
-The user can interact with zorro via the cli, the REST API or the gRPC API. He can also interact with
-various frontends (like kitsu or shotgrid) wich are actually using the REST API.
-
-All interactions the user will make will be through tools. There is different types of tools, they are declared via
-configs and they represent a functionality exposed to the user. They are always bound to a context, when a tool
-is triggered a context must be selected with it.
+Zorro is a framework used to create user friendly **tools**. There is different types of tools,
+they are declared via **plugins** and they represent a functionality exposed to the user.
+They are always bound to a **context**, when a tool is triggered a context must be selected with it.
+Zorro lets you create your own tools that will pilot multiple applications, it serve as a
+comunication hub between all your softwares to synchronize operations that you will create.
 
 ## The types of tools
 
-Tools can be composed of each other, there is higher level type of tools than others
+Tools can be nested, there is higher level type of tools than others
 
 - **command**: A command is the smallest type of tool, it is rarely used alone and define a piece of code
   to execute on a given client.
@@ -22,11 +21,29 @@ Tools can be composed of each other, there is higher level type of tools than ot
 - **widget**: A group of graphical components bound to a command, used to build interactive GUI
 - **hook**: Used to attach commands or actions to a particular event.
 
+## How does it works
+
+When creating your plugins you will define:
+- **tools**: That will register functionalities exposed to the user
+- **processors**: That will define an application able to communicate with zorro
+
+Zorro is using the [grpc](https://grpc.io/) protocol to communicate with processors.
+When a tool will be executed, zorro will start the nessesary processors to execute the tool
+and will communicate with them to request execution.
+The processors can understand each other thanks to [protocol buffers](https://protobuf.dev/)
+wich serves as a common data format for all the processors
+
 ## Get started
 
 ### CI / CD
 
 #### Unit tests
+
+First make sure you fetched the git submodules (used by some tests)
+
+```
+git submodule init --remote
+```
 
 To run the unit test use:
 
@@ -47,34 +64,4 @@ Make sure to format your code either by configuring your IDE or executing
 
 ```bash
 gofumpt -l -w .
-```
-
-### Protobufs
-
-#### Install protoc
-
-- Install the [protoc executable](https://protobuf.dev/downloads)
-- Install the golang protoc generator
-
-```bash
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-```
-
-#### Generate structs from proto files
-
-This project is using [protobufs](https://protobuf.dev/) for a lots of struct definitions. After every
-modifications if a proto buffer make sure to regenerate the structs
-
-To generate all the proto files at once
-
-```bash
-go generate .
-```
-
-You can also generate the proto files independently
-
-```bash
-protoc --go_out=. --go_opt=paths=source_relative ./internal/tools/*.proto
-protoc --go_out=. --go_opt=paths=source_relative ./internal/context/*.proto
-protoc --go_out=. --go_opt=paths=source_relative ./internal/scheduling/*.proto
 ```
