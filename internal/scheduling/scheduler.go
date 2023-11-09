@@ -49,14 +49,12 @@ func ListenCommandQueries() {
 		}
 
 		// Execute the command query
-		err = registeredProcessor.ProcessCommand(commandQuery)
-		if err != nil {
-			commandQuery.Result <- err
-		}
+		commandQuery.Result <- registeredProcessor.ProcessCommand(commandQuery)
 	}
 }
 
 func init() {
 	grpcServer, _ := network.GrpcServer()
 	scheduling_proto.RegisterSchedulingServer(grpcServer, &schedulingServer{})
+	go ListenCommandQueries()
 }

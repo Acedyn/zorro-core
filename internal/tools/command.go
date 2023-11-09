@@ -7,6 +7,8 @@ import (
 	"github.com/Acedyn/zorro-core/internal/context"
 
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var (
@@ -19,6 +21,9 @@ type CommandExecutionType string
 var EXECUTE_COMMAND CommandExecutionType = "Execute"
 var UNDO_COMMAND CommandExecutionType = "Undo"
 var TEST_COMMAND CommandExecutionType = "Test"
+
+var COMMAND_PATCH_OUTPUT string = "zorro_command"
+var CONTEXT_PATCH_OUTPUT string = "zorro_context"
 
 // Wrapped command with methods attached
 type Command struct {
@@ -91,6 +96,42 @@ func (command *Command) Test(c *context.Context) error {
 	// Wait for the scheduler to take the command from the queue
 	// And let it set the result
 	return <-command.execute(c, TEST_COMMAND)
+}
+
+// Used internally to store the result of the command call
+func (command *Command) SetOutput(message protoreflect.Message) error {
+	if command.Base.Output == nil {
+		command.Base.Output = &tools_proto.Socket{}
+	}
+
+	// Apply the command update
+	commandFieldDescriptor := message.Descriptor().Fields().ByName(protoreflect.Name(COMMAND_PATCH_OUTPUT))
+	if commandFieldDescriptor != nil {
+		commandField := message.Get(commandFieldDescriptor)
+		if commandFieldDescriptor.Message() == nil {
+			return fmt.Errorf("invalid datatype for command field: expected message, received %s", commandFieldDescriptor.Kind())
+		} else {
+			commandPatch := tools_proto.Command{}
+			rawMessage, err := proto.Marshal(commandField.Message().Interface())
+			if err != nil {
+				return fmt.Errorf("could not marshall command field to patch command: %w", err)
+			}
+			err = proto.Unmarshal(rawMessage, &commandPatch)
+			if err != nil {
+				return fmt.Errorf("could not parse command field to patch command: %w", err)
+			}
+
+			command.Update(&Command{&commandPatch})
+		}
+		message.Clear(commandFieldDescriptor)
+	}
+
+	// Set the output to the message
+	err := command.GetBase().GetOutput().UpdateWithMessage(message)
+	if err != nil {
+		return fmt.Errorf("could not set the output to command %s: %w", command.GetBase().GetId(), err)
+	}
+	return nil
 }
 
 // Update the command with a patch

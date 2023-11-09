@@ -21,7 +21,6 @@ type TraversableTool interface {
 	Traverse(func(TraversableTool) error) error
 }
 
-
 // Get the wrapped output with all its methods
 func (tool *ToolBase) GetOutput() *Socket {
 	return &Socket{tool.ToolBase.GetOutput()}
@@ -29,7 +28,7 @@ func (tool *ToolBase) GetOutput() *Socket {
 
 // Get the wrapped inputt with all its methods
 func (tool *ToolBase) GetInput() *Socket {
-	return &Socket{tool.ToolBase.GetOutput()}
+	return &Socket{tool.ToolBase.GetInput()}
 }
 
 func (tool *ToolBase) Update(patch *ToolBase) bool {
@@ -50,6 +49,9 @@ func (tool *ToolBase) Update(patch *ToolBase) bool {
 	}
 
 	// Logs are a special case, they are combined together
+	if tool.Logs == nil {
+		tool.Logs = map[int64]string{}
+	}
 	maps.Update(tool.Logs, patch.GetLogs())
 
 	return isPatched

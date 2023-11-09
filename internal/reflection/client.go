@@ -141,7 +141,7 @@ func (client *ReflectionClient) GetServiceDescriptors() []protoreflect.ServiceDe
 }
 
 // Find a registered service via its full name (generally [package_name].[service_name] unless its nested)
-func (client *ReflectionClient) GetdMethodDescriptor(serviceName, methodName string) (protoreflect.MethodDescriptor, string, error) {
+func (client *ReflectionClient) GetMethodDescriptor(serviceName, methodName string) (protoreflect.MethodDescriptor, string, error) {
 	// Get the service
 	var serviceDescriptor protoreflect.ServiceDescriptor
 	client.registry.RangeFiles(func(fileDescriptor protoreflect.FileDescriptor) bool {
