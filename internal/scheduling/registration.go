@@ -11,7 +11,6 @@ import (
 	"github.com/Acedyn/zorro-core/internal/tools"
 
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
-	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -48,7 +47,7 @@ type RegisteredProcessor struct {
 func (processor *RegisteredProcessor) ProcessCommand(commandQuery *tools.CommandQuery) error {
 	commandBase := commandQuery.Command.GetBase()
 	// Get the method descriptor that correspond to the command request
-	methodDescriptor, methodPath, err := processor.Client.GetdMethodDescriptor(commandBase.GetName(), string(commandQuery.ExecutionType))
+	methodDescriptor, methodPath, err := processor.Client.GetMethodDescriptor(commandBase.GetName(), string(commandQuery.ExecutionType))
 	if err != nil {
 		return fmt.Errorf("could not find method with processor at host %s: %w", processor.Host, err)
 	}
@@ -77,12 +76,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery *tools.Command
 			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
 		}
 
-		// The output might be nil
-		if commandBase.Output == nil {
-			commandBase.Output = &tools_proto.Socket{}
-		}
-		err := commandBase.GetOutput().UpdateWithMessage(outputMessage)
-
+		err := commandQuery.Command.SetOutput(outputMessage)
 		if err != nil {
 			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
 		}

@@ -45,15 +45,6 @@ func mockedSocketValueDescriptor(name string) (protoreflect.MessageDescriptor, e
 	return fileDescriptor.Messages().ByName(protoreflect.Name(name)), nil
 }
 
-func initDefaultMessage(message *dynamicpb.Message) {
-	messageDescriptor := message.Descriptor()
-
-	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
-		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
-		message.Set(fieldDescriptor, message.NewField(fieldDescriptor))
-	}
-}
-
 func TestSocketUpdate(t *testing.T) {
 	socketValueDescriptor, err := mockedSocketValueDescriptor("TestSocket")
 	if err != nil || socketValueDescriptor == nil {

@@ -1,19 +1,53 @@
 package scheduling
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/Acedyn/zorro-core/internal/context"
+	zorro_context "github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/network"
+	"github.com/Acedyn/zorro-core/internal/reflection"
 	"github.com/Acedyn/zorro-core/internal/tools"
+	"github.com/life4/genesis/maps"
 
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
+	"github.com/bufbuild/protocompile"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+func mockedSocketValueDescriptor(name string) (protoreflect.MessageDescriptor, error) {
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("could not get the current working directory: %w", err)
+	}
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	fileName := "log.proto"
+	rootPath := filepath.Join(cwdPath, "testdata", "mocked_plugins", "python", "python@3.10", "zorro_python", "commands", "log")
+	importPath := filepath.Join(cwdPath, "testdata", "mocked_plugins", "python", "python@3.10", "protos")
+
+	compiler := protocompile.Compiler{
+		Resolver: &protocompile.SourceResolver{
+			ImportPaths: []string{rootPath, importPath},
+		},
+	}
+	files, err := compiler.Compile(context.Background(), fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %w", fileName, err)
+	}
+	if len(files) != 1 {
+		return nil, fmt.Errorf("%d files parsed instead of one", len(files))
+	}
+
+	fileDescriptor := files[0]
+	return fileDescriptor.Messages().ByName(protoreflect.Name(name)), nil
+}
 
 func getFreePort() (int, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
@@ -45,12 +79,15 @@ func TestProcessorRegistration(t *testing.T) {
 
 	// Start the server in its own goroutine
 	go func() {
+		_, grpcStatus := network.GrpcServer()
+		if grpcStatus.IsRunning {
+			return
+		}
+
 		if err := network.ServeGrpc(host, port); err != nil {
 			t.Errorf("An error occured while serving GRPC: %s", err.Error())
 		}
 	}()
-	grpcServer, _ := network.GrpcServer()
-	defer grpcServer.GracefulStop()
 
 	cwdPath, err := os.Getwd()
 	if err != nil {
@@ -59,7 +96,7 @@ func TestProcessorRegistration(t *testing.T) {
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 	fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins")
 
-	resolvedContext, err := context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
+	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
 		Repos: []string{fullPath},
 	}})
 
@@ -75,7 +112,13 @@ func TestProcessorRegistration(t *testing.T) {
 	}
 }
 
-func WipTestCommandExecution(t *testing.T) {
+func TestCommandExecution(t *testing.T) {
+	logMethodDescriptor, err := mockedSocketValueDescriptor("LogInput")
+	if err != nil || logMethodDescriptor == nil {
+		t.Errorf("Could not get the log message descriptor: %v", err)
+		return
+	}
+
 	host := "127.0.0.1"
 	port, err := getFreePort()
 
@@ -85,15 +128,14 @@ func WipTestCommandExecution(t *testing.T) {
 
 	// Start the server in its own goroutine
 	go func() {
+		_, grpcStatus := network.GrpcServer()
+		if grpcStatus.IsRunning {
+			return
+		}
 		if err := network.ServeGrpc(host, port); err != nil {
 			t.Errorf("An error occured while serving GRPC: %s", err.Error())
 		}
 	}()
-	grpcServer, _ := network.GrpcServer()
-	defer grpcServer.GracefulStop()
-
-	// Start the listener
-	go ListenCommandQueries()
 
 	cwdPath, err := os.Getwd()
 	if err != nil {
@@ -102,7 +144,7 @@ func WipTestCommandExecution(t *testing.T) {
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 	fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins")
 
-	resolvedContext, err := context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
+	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
 		Repos: []string{fullPath},
 	}})
 
@@ -114,8 +156,29 @@ func WipTestCommandExecution(t *testing.T) {
 	processorQuery := pythonProcessorQuery
 	processorQuery.Context = resolvedContext.Context
 
+	commandMessage := "Hello Zorro"
+	commandRawMessage := []byte{}
+	fieldDescriptor := logMethodDescriptor.Fields().ByName("message")
+	commandRawMessage, err = reflection.MarshalField(&proto.MarshalOptions{}, commandRawMessage, fieldDescriptor, protoreflect.ValueOfString(commandMessage))
+	if err != nil {
+		t.Errorf("an error occured while marshalling the command message: %v", err)
+		return
+	}
+
 	command := tools.Command{
 		Command: &tools_proto.Command{
+			Base: &tools_proto.ToolBase{
+				Name: &[]string{"zorro_python.Log"}[0],
+				Input: &tools_proto.Socket{
+					Fields: map[string]*tools_proto.Socket{
+						"message": {
+							Value: &tools_proto.Socket_Raw{
+								Raw: commandRawMessage,
+							},
+						},
+					},
+				},
+			},
 			ProcessorQuery: processorQuery.ProcessorQuery,
 		},
 	}
@@ -123,6 +186,12 @@ func WipTestCommandExecution(t *testing.T) {
 	err = command.Execute(resolvedContext)
 	if err != nil {
 		t.Errorf("An error occured when executing the command %v: %v", command, err)
+		return
+	}
+
+	expectedLog := fmt.Sprintf("DEBUG: %s", commandMessage)
+	if !maps.HasValue(command.GetBase().GetLogs(), expectedLog) {
+		t.Errorf("Expected to find \"%s\" in log message after log command: found %v", expectedLog, command.GetBase().GetLogs())
 		return
 	}
 }

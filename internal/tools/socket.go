@@ -87,7 +87,7 @@ func (socket *Socket) UpdateWithMessage(message protoreflect.Message) error {
 func (socket *Socket) UpdateWithField(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) error {
 	// If the value is a message then this function is recursive
 	// Maps a considered like messages but we want to treat only messages recursively
-	if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() {
+	if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
 		return socket.UpdateWithMessage(value.Message())
 	}
 

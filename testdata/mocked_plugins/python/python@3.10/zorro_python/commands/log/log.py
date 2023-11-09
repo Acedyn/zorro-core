@@ -3,6 +3,7 @@ from datetime import datetime
 
 import grpc
 
+from zorro_python.logger import logger
 from zorro_python.commands.log import log_pb2, log_pb2_grpc
 from zorroprotos.tools import command_pb2, tool_pb2
 
@@ -11,6 +12,7 @@ class LogServicer(log_pb2_grpc.LogServicer):
     def Execute(
         self, request: log_pb2.LogInput, _: grpc.ServicerContext
     ) -> Iterable[log_pb2.LogOutput]:
+        logger.info("Executing the log command")
         message = f"DEBUG: {request.message}"
         if request.level == log_pb2.LogLevels.INFO:
             message = f"INFO: {request.message}"
@@ -22,22 +24,18 @@ class LogServicer(log_pb2_grpc.LogServicer):
             message = f"CRITICAL: {request.message}"
 
         timestamp = int(datetime.now().timestamp() * 1000)
-        try:
-            yield log_pb2.LogOutput(
-                message=message,
-                timestamp=timestamp,
-                zorro_command=command_pb2.Command(
-                    base=tool_pb2.ToolBase(logs={timestamp: message})
-                ),
-            )
-        except Exception as e:
-            import traceback
-
-            traceback.print_exception(e)
+        yield log_pb2.LogOutput(
+            message=message,
+            timestamp=timestamp,
+            zorro_command=command_pb2.Command(
+                base=tool_pb2.ToolBase(logs={timestamp: message})
+            ),
+        )
 
     def Undo(
         self, request: log_pb2.LogInput, _: grpc.ServicerContext
     ) -> Iterable[log_pb2.LogOutput]:
+        logger.info("Undoing the log command")
         message = f"DEBUG: [UNDO] {request.message}"
         if request.level == log_pb2.LogLevels.INFO:
             message = f"INFO: {request.message}"
