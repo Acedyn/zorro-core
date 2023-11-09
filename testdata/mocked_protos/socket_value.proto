@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package zorro_testing;
+option go_package = "github.com/Acedyn/zorro-proto/zorroprotos/tools";
+
+enum EnumField {
+  A = 0;
+  B = 1;
+  C = 2;
+}
+
+message MessageField {
+  string quux = 1;
+  repeated bool corge = 2;
+  float grault = 3;
+  map<string, bytes> garply = 4;
+}
+
+message TestSocket {
+  MessageField foo = 1;
+  int32 bar = 2;
+  repeated string baz = 3;
+  EnumField waldo = 4;
+  map<string, MessageField> qux = 5;
+}

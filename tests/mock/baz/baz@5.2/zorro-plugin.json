@@ -1,7 +1,0 @@
-{
-  "tools": {
-    "commands": ["./commands"],
-    "actions": ["./actions"]
-  },
-  "require": ["foo>=5.3"]
-}
