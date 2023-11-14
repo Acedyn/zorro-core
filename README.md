@@ -16,7 +16,7 @@ comunication hub between all your softwares to synchronize operations that you w
 Tools can be nested, there is higher level type of tools than others
 
 - **command**: A command is the smallest type of tool, it is rarely used alone and define a piece of code
-  to execute on a given client.
+  to execute on a given processor.
 - **action**: Used to group and organise commands into a dependency graph and execute it sequencially.
 - **widget**: A group of graphical components bound to a command, used to build interactive GUI
 - **hook**: Used to attach commands or actions to a particular event.

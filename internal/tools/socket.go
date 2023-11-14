@@ -1,14 +1,12 @@
 package tools
 
 import (
+	"encoding/json"
 	"fmt"
-
-	"github.com/Acedyn/zorro-core/internal/reflection"
 
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/life4/genesis/maps"
-	"google.golang.org/protobuf/encoding/protowire"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -50,29 +48,63 @@ func (socket *Socket) Update(patch *Socket) bool {
 
 // Update the socket's raw data with a proto value
 func (socket *Socket) UpdateWithMessage(message protoreflect.Message) error {
-	rawMessage, err := proto.Marshal(message.Interface())
+	messageDescriptor := message.Descriptor()
+	socket.Kind = string(messageDescriptor.FullName())
+
+  // First make sure all the fields are set
+	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
+		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
+		value := message.Get(fieldDescriptor)
+    if fieldDescriptor.IsList() {
+      value = protoreflect.ValueOfList(message.Mutable(fieldDescriptor).List())
+    } else if fieldDescriptor.IsMap() {
+      value = protoreflect.ValueOfMap(message.Mutable(fieldDescriptor).Map())
+    } else if fieldDescriptor.Message() != nil {
+		  value = message.Mutable(fieldDescriptor)
+    }
+    message.Set(fieldDescriptor, value)
+  }
+
+  rawMessage, err := protojson.Marshal(message.Interface())
 	if err != nil {
 		return fmt.Errorf("could not store raw message %s: %w", message, err)
 	}
 
-	// Set the raw value first
-	socket.Kind = string(message.Descriptor().FullName())
-	socket.Value = &tools_proto.Socket_Raw{
-		Raw: rawMessage,
-	}
+  // Decompose the value into fields
+  rawFields := map[string][]byte{}
+  err = json.Unmarshal(rawMessage, &rawFields)
+  if err != nil {
+    return fmt.Errorf("could not decompose message fields: %w", err)
+  }
 
-	// Decompose the value into fields so they can be fetched separatly
-	messageDescriptor := message.Descriptor()
+  // For each field of the message store the value in a new socket
 	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
 		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
-		value := message.Get(fieldDescriptor)
 
 		// Here we set the value or the default value if the value is not there
 		fieldSocket := Socket{&tools_proto.Socket{}}
-		err = fieldSocket.UpdateWithField(fieldDescriptor, value)
-		if err != nil {
-			break
-		}
+    if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
+      // For nested messages make this method recursive
+		  err = fieldSocket.UpdateWithMessage(message.Mutable(fieldDescriptor).Message())
+      if err != nil {
+        return fmt.Errorf("could not update socket field with message: %w", err)
+      }
+    } else {
+      // Store the raw value individualy for value fields
+      rawField, ok := rawFields[fieldDescriptor.JSONName()]
+      if !ok {
+        continue
+      }
+
+      fieldSocket.Update(&Socket{
+        &tools_proto.Socket{
+          Kind: formatFieldDescriptorKind(fieldDescriptor),
+          Value: &tools_proto.Socket_Raw{
+            Raw: rawField,
+          },
+        },
+      })
+    }
 
 		socket.SetField(fieldDescriptor.TextName(), &fieldSocket)
 	}
@@ -83,108 +115,39 @@ func (socket *Socket) UpdateWithMessage(message protoreflect.Message) error {
 	return nil
 }
 
-// Update the socket's raw data with a message field
-func (socket *Socket) UpdateWithField(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value) error {
-	// If the value is a message then this function is recursive
-	// Maps a considered like messages but we want to treat only messages recursively
-	if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
-		return socket.UpdateWithMessage(value.Message())
-	}
-
-	rawValue := []byte{}
-	rawValue, err := reflection.MarshalField(&proto.MarshalOptions{}, rawValue, fieldDescriptor, value)
-	if err != nil {
-		return fmt.Errorf("an error occured while marshalling the socket %s: %w", socket, err)
-	}
-
-	socket.Kind = formatFieldDescriptorKind(fieldDescriptor)
-	socket.Value = &tools_proto.Socket_Raw{
-		Raw: rawValue,
-	}
-	return nil
-}
-
 // Apply the socket's values to a message
-func (socket *Socket) ApplyValueToMessage(message protoreflect.Message) error {
-	// The raw value is applied only if the socket has no fields, otherwise the fields
-	// take the priority and their value are applied instead
-	if len(socket.GetFields()) == 0 {
-		// Try to apply the raw value to the message
-		socketRawValue, err := socket.ResolveRawValue()
-		if err != nil {
-			return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
-		}
+func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message) error {
 
-		err = proto.Unmarshal(socketRawValue, message.Interface())
-		if err != nil {
-			return fmt.Errorf("invalid raw message from socket %s: %w", socket, err)
-		}
-	} else {
-		// The socket has fields defined so we apply them instead of applying the raw value
-		var err error = nil
-		// Override the message's fields with the fields entries
-		messageDescriptor := message.Descriptor()
-		for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
-			fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
-			value := message.Get(fieldDescriptor)
+	messageDescriptor := message.Descriptor()
+	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
+		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
+    socketField, ok := socket.GetFields()[fieldDescriptor.JSONName()]
+    if !ok {
+      continue
+    }
 
-			// Some fields might not be set and left with default value
-			fieldSocket, ok := socket.GetFields()[fieldDescriptor.TextName()]
-			if !ok {
-				continue
-			}
+    if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
+      socketField.ApplyFieldsToMessage(message.Mutable(fieldDescriptor).Message())
+    } else {
+		  socketRawValue, err := socketField.ResolveRawValue()
+      if err != nil {
+        return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
+      }
 
-			// Set the value of that field individually
-			err = fieldSocket.ApplyValueToField(fieldDescriptor, value, message)
-			if err != nil {
-				break
-			}
-		}
+      jsonPatch := map[string][]byte{fieldDescriptor.JSONName(): socketRawValue}
+      encodedJsonPatch, err := json.Marshal(jsonPatch)
+      if err != nil {
+        return fmt.Errorf("invalid raw message %s from socket field %s: %w", jsonPatch, socketField, err)
+      }
 
-		if err != nil {
-			return fmt.Errorf("could not apply field value on socket %s: %w", socket, err)
-		}
-	}
+      err = protojson.Unmarshal(encodedJsonPatch, message.Interface())
+      if err != nil {
+        return fmt.Errorf("an error occured while applying json patch %s on message %s: %w", jsonPatch, message, err)
+      }
+    }
+  }
 
 	return nil
-}
-
-// Apply the socket's field value to a message field
-func (socket *Socket) ApplyValueToField(fieldDescriptor protoreflect.FieldDescriptor, value protoreflect.Value, message protoreflect.Message) error {
-	// Resolve the raw value to apply
-	rawValue, err := socket.ResolveRawValue()
-	if err != nil {
-		return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
-	}
-
-	unmarshalOptions := &proto.UnmarshalOptions{RecursionLimit: protowire.DefaultRecursionLimit}
-	_, wtyp, tagLen := protowire.ConsumeTag(rawValue)
-
-	// Apply the value according to the expected data type
-	switch {
-	case fieldDescriptor.IsMap():
-		_, err := reflection.UnmarshalMap(unmarshalOptions, rawValue[tagLen:], wtyp, message.Mutable(fieldDescriptor).Map(), fieldDescriptor)
-		if err != nil {
-			return fmt.Errorf("error occured while unmarshalling map field %s: %w", fieldDescriptor.FullName(), err)
-		}
-	case fieldDescriptor.IsList():
-		_, err := reflection.UnmarshalList(unmarshalOptions, rawValue[tagLen:], wtyp, message.Mutable(fieldDescriptor).List(), fieldDescriptor)
-		if err != nil {
-			return fmt.Errorf("error occured while unmarshalling list field %s: %w", fieldDescriptor.FullName(), err)
-		}
-	case fieldDescriptor.Message() != nil:
-		err = socket.ApplyValueToMessage(message.Mutable(fieldDescriptor).Message())
-		if err != nil {
-			return fmt.Errorf("error occured while unmarshalling message field %s: %w", fieldDescriptor.FullName(), err)
-		}
-	default:
-		_, err := reflection.UnmarshalSingular(unmarshalOptions, rawValue[tagLen:], wtyp, message, fieldDescriptor)
-		if err != nil {
-			return fmt.Errorf("error occured while unmarshalling singular field %s: %w", fieldDescriptor.FullName(), err)
-		}
-	}
-
-	return err
 }
 
 // Get the raw value after resolving the links

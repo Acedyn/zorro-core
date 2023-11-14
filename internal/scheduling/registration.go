@@ -54,7 +54,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery *tools.Command
 
 	// Apply the socket value to the input message
 	inputMessage := dynamicpb.NewMessage(methodDescriptor.Input())
-	err = commandBase.GetInput().ApplyValueToMessage(inputMessage)
+	err = commandBase.GetInput().ApplyFieldsToMessage(inputMessage)
 	if err != nil {
 		return fmt.Errorf("could not build input message for method %s: %w", methodDescriptor.FullName(), err)
 	}

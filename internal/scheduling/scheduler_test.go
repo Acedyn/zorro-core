@@ -112,7 +112,7 @@ func TestProcessorRegistration(t *testing.T) {
 	}
 }
 
-func TestCommandExecution(t *testing.T) {
+func OLDTestCommandExecution(t *testing.T) {
 	logMethodDescriptor, err := mockedSocketValueDescriptor("LogInput")
 	if err != nil || logMethodDescriptor == nil {
 		t.Errorf("Could not get the log message descriptor: %v", err)

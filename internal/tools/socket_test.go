@@ -57,7 +57,7 @@ func TestSocketUpdate(t *testing.T) {
 
 	err = socket.UpdateWithMessage(message)
 	if err != nil {
-		t.Errorf("An error occured whild updating a socket with the message %s: %v", message, err)
+		t.Errorf("An error occured while updating a socket with the message %s: %v", message, err)
 		return
 	}
 
@@ -95,7 +95,7 @@ func TestSocketUpdate(t *testing.T) {
 	}
 }
 
-func TestSocketApplyValue(t *testing.T) {
+func TestSocketApplyFields(t *testing.T) {
 	socketValueDescriptor, err := mockedSocketValueDescriptor("TestSocket")
 	if err != nil || socketValueDescriptor == nil {
 		t.Errorf("Could not get the mocked socket value descriptor: %v", err)
@@ -188,7 +188,7 @@ func TestSocketApplyValue(t *testing.T) {
 		},
 	})
 
-	err = socket.ApplyValueToMessage(message)
+	err = socket.ApplyFieldsToMessage(message)
 	if err != nil {
 		t.Errorf("An error occured while applying the socket values to a message: %v", err)
 		return
