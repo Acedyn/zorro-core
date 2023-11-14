@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -248,6 +249,7 @@ func TestActionTraversal(t *testing.T) {
 	traversalHistory := []string{}
 	actionTraversalTest.Traverse(func(tool TraversableTool) error {
 		traversalHistory = append(traversalHistory, tool.GetBase().GetName())
+		fmt.Println(tool.GetBase().GetName())
 		return nil
 	})
 
