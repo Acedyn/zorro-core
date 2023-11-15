@@ -2,6 +2,7 @@ package scheduling
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -10,7 +11,6 @@ import (
 
 	zorro_context "github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/network"
-	"github.com/Acedyn/zorro-core/internal/reflection"
 	"github.com/Acedyn/zorro-core/internal/tools"
 	"github.com/life4/genesis/maps"
 
@@ -18,7 +18,6 @@ import (
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/bufbuild/protocompile"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -112,7 +111,7 @@ func TestProcessorRegistration(t *testing.T) {
 	}
 }
 
-func OLDTestCommandExecution(t *testing.T) {
+func TestCommandExecution(t *testing.T) {
 	logMethodDescriptor, err := mockedSocketValueDescriptor("LogInput")
 	if err != nil || logMethodDescriptor == nil {
 		t.Errorf("Could not get the log message descriptor: %v", err)
@@ -157,9 +156,7 @@ func OLDTestCommandExecution(t *testing.T) {
 	processorQuery.Context = resolvedContext.Context
 
 	commandMessage := "Hello Zorro"
-	commandRawMessage := []byte{}
-	fieldDescriptor := logMethodDescriptor.Fields().ByName("message")
-	commandRawMessage, err = reflection.MarshalField(&proto.MarshalOptions{}, commandRawMessage, fieldDescriptor, protoreflect.ValueOfString(commandMessage))
+	commandRawMessage, err := json.Marshal(commandMessage)
 	if err != nil {
 		t.Errorf("an error occured while marshalling the command message: %v", err)
 		return

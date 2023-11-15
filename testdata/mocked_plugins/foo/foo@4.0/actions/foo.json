@@ -1,0 +1,28 @@
+{
+  "label": "The foo action",
+  "input": {
+    "fields": {
+      "input_message_a": {
+        "kind": "string"
+      }
+      "input_message_b": {
+        "kind": "int"
+      }
+    }
+  },
+  "tooltip": "simple action for testing purpose",
+  "children": {
+    "log_a": {
+      "command": {
+        ""
+      },
+    },
+    "log_b": {
+      "command": {
+
+      },
+      "upstream": "log_a"
+    },
+  }
+}
+

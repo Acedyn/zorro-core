@@ -1,8 +1,8 @@
 package tools
 
 import (
-	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/life4/genesis/maps"
@@ -247,9 +247,11 @@ var actionTraversalTest = Action{
 
 func TestActionTraversal(t *testing.T) {
 	traversalHistory := []string{}
+	traversalHistoryMutex := &sync.Mutex{}
 	actionTraversalTest.Traverse(func(tool TraversableTool) error {
+		traversalHistoryMutex.Lock()
 		traversalHistory = append(traversalHistory, tool.GetBase().GetName())
-		fmt.Println(tool.GetBase().GetName())
+		traversalHistoryMutex.Unlock()
 		return nil
 	})
 

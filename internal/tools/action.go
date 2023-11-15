@@ -3,14 +3,14 @@ package tools
 import (
 	"fmt"
 
+	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
-  tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
 
 // Wrapped action with methods attached
 type Action struct {
-  *tools_proto.Action
+	*tools_proto.Action
 }
 
 // Hold the returned value of a child task
@@ -21,7 +21,7 @@ type ChildTaskResult struct {
 
 // Get the wrapped base with all its methods
 func (action *Action) GetBase() *ToolBase {
-  return &ToolBase{ToolBase: action.Action.GetBase()}
+	return &ToolBase{ToolBase: action.Action.GetBase()}
 }
 
 // Find and traverse children that have all their dependencies (upstream)
@@ -39,9 +39,9 @@ func (action *Action) getReadyChildren(pending map[string]bool, completed []stri
 		if slices.All(child.Upstream, func(el string) bool { return slices.Contains(completed, el) }) {
 			switch child.GetChild().(type) {
 			case *tools_proto.ActionChild_Action:
-        readyChildren[childKey] = &Action{Action: child.GetAction()}
+				readyChildren[childKey] = &Action{Action: child.GetAction()}
 			case *tools_proto.ActionChild_Command:
-        readyChildren[childKey] = &Command{Command: child.GetCommand()}
+				readyChildren[childKey] = &Command{Command: child.GetCommand()}
 			}
 		}
 	}
@@ -49,7 +49,7 @@ func (action *Action) getReadyChildren(pending map[string]bool, completed []stri
 }
 
 // Run the task to all the children, respecting the order of execution
-// and dependencies. Multiple might can run concurently.
+// and dependencies. Multiple might can run concurently (the task MUST be threadsafe !)
 func (action *Action) Traverse(task func(TraversableTool) error) error {
 	// We first traverse this action before traversing its children
 	if err := task(action); err != nil {
