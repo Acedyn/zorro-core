@@ -15,28 +15,40 @@ type Socket struct {
 	*tools_proto.Socket
 }
 
+func (socket *Socket) GetSocket() *tools_proto.Socket {
+	if socket.Socket == nil {
+		socket.Socket = &tools_proto.Socket{}
+	}
+	return socket.Socket
+}
+
 // Get the wrapped socket fields with all their methods
+// This method is for accessing the fields, not for editing the map's structure
 func (socket *Socket) GetFields() map[string]*Socket {
-	return maps.Map(socket.Socket.GetFields(), func(k string, v *tools_proto.Socket) (string, *Socket) {
+	if socket.GetSocket().GetFields() == nil {
+		socket.GetSocket().Fields = map[string]*tools_proto.Socket{}
+	}
+
+	return maps.Map(socket.GetSocket().GetFields(), func(k string, v *tools_proto.Socket) (string, *Socket) {
 		return k, &Socket{v}
 	})
 }
 
 // Safe setter for the Field field
 func (socket *Socket) SetField(key string, value *Socket) {
-	if socket.Socket.GetFields() == nil {
-		socket.Socket.Fields = map[string]*tools_proto.Socket{}
+	if socket.GetSocket().GetFields() == nil {
+		socket.GetSocket().Fields = map[string]*tools_proto.Socket{}
 	}
-	socket.Socket.GetFields()[key] = value.Socket
+	socket.GetSocket().GetFields()[key] = value.Socket
 }
 
-// Update the command with a patch
+// Update the socket with a patch
 func (socket *Socket) Update(patch *Socket) bool {
 	// Patch the local version of the socket
 	isPatched := false
 
 	// Update the kind
-	if socket.GetKind() != patch.GetKind() {
+	if patch.GetKind() != "" && socket.GetKind() != patch.GetKind() {
 		socket.Kind = patch.GetKind()
 		isPatched = true
 	}
@@ -48,10 +60,12 @@ func (socket *Socket) Update(patch *Socket) bool {
 	}
 
 	// Recursively update the socket
-	for fieldName, fieldSocket := range socket.GetFields() {
-		fieldPatch, ok := patch.GetFields()[fieldName]
+	for fieldName, fieldPatch := range patch.GetFields() {
+		fieldSocket, ok := socket.GetFields()[fieldName]
 		if ok && fieldSocket.Update(fieldPatch) {
 			isPatched = true
+		} else if !ok {
+			socket.SetField(fieldName, fieldPatch)
 		}
 	}
 

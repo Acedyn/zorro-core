@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -276,5 +278,36 @@ func TestActionTraversal(t *testing.T) {
 				traversedKey,
 			)
 		}
+	}
+}
+
+func TestActionUnmarshall(t *testing.T) {
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		t.Errorf("Could not get the current working directory: %v", err)
+		return
+	}
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	action_path := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
+
+	action, err := LoadAction(action_path)
+	if err != nil {
+		t.Errorf("An error occured when loading the action at path %s: %v", action_path, err)
+	}
+
+	if action.GetBase().GetName() != "foo" {
+		t.Errorf("Expected the name to be foo in the unmarshaled action")
+	}
+
+	if action.GetBase().GetLabel() != "Foo" {
+		t.Errorf("Expected the label to be Foo in the unmarshaled action")
+	}
+
+	if _, inputMessageAExists := action.GetBase().GetInput().GetFields()["input_message_a"]; !inputMessageAExists {
+		t.Errorf("Expected an input field at key 'input_message_a' in the unmarshaled action")
+	}
+
+	if _, logAExexists := action.GetChildren()["log_a"]; !logAExexists {
+		t.Errorf("Expected a child at key 'log_a' in the unmarshaled action")
 	}
 }

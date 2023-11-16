@@ -2,11 +2,31 @@ package tools
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
+	"google.golang.org/protobuf/encoding/protojson"
 )
+
+// Wrapped action child with methods attached
+type ActionChild struct {
+	*tools_proto.ActionChild
+}
+
+// Get the wrapped action
+func (actionChild *ActionChild) GetAction() *Action {
+	return &Action{actionChild.ActionChild.GetAction()}
+}
+
+// Get the wrapped command
+func (actionChild *ActionChild) GetCommand() *Command {
+	return &Command{actionChild.ActionChild.GetCommand()}
+}
 
 // Wrapped action with methods attached
 type Action struct {
@@ -24,6 +44,18 @@ func (action *Action) GetBase() *ToolBase {
 	return &ToolBase{ToolBase: action.Action.GetBase()}
 }
 
+// Get the wrapped children with all their methods
+// This method is for accessing the children, not for editing the map's structure
+func (action *Action) GetChildren() map[string]*ActionChild {
+	if action.Action.GetChildren() == nil {
+		action.Action.Children = map[string]*tools_proto.ActionChild{}
+	}
+
+	return maps.Map(action.Action.GetChildren(), func(k string, v *tools_proto.ActionChild) (string, *ActionChild) {
+		return k, &ActionChild{v}
+	})
+}
+
 // Find and traverse children that have all their dependencies (upstream)
 // completed.
 func (action *Action) getReadyChildren(pending map[string]bool, completed []string) map[string]TraversableTool {
@@ -39,9 +71,9 @@ func (action *Action) getReadyChildren(pending map[string]bool, completed []stri
 		if slices.All(child.Upstream, func(el string) bool { return slices.Contains(completed, el) }) {
 			switch child.GetChild().(type) {
 			case *tools_proto.ActionChild_Action:
-				readyChildren[childKey] = &Action{Action: child.GetAction()}
+				readyChildren[childKey] = child.GetAction()
 			case *tools_proto.ActionChild_Command:
-				readyChildren[childKey] = &Command{Command: child.GetCommand()}
+				readyChildren[childKey] = child.GetCommand()
 			}
 		}
 	}
@@ -100,4 +132,88 @@ func (action *Action) Traverse(task func(TraversableTool) error) error {
 	}
 
 	return nil
+}
+
+// Update the action with a patch
+func (action *Action) Update(patch *Action) bool {
+	// Patch the local version of the action
+	isPatched := false
+	if action.GetBase().Update(patch.GetBase()) {
+		isPatched = true
+	}
+
+	// Apply the update on the children
+	for childKey, patchChild := range patch.GetChildren() {
+		actionChild, ok := action.GetChildren()[childKey]
+		if !ok {
+			action.Children[childKey] = patchChild.ActionChild
+			isPatched = true
+			continue
+		}
+
+		switch patchChild.GetChild().(type) {
+		case *tools_proto.ActionChild_Action:
+			if !ok || actionChild.GetAction() == nil {
+				action.Children[childKey] = patchChild.ActionChild
+				isPatched = true
+			} else {
+				isPatched = patchChild.GetAction().Update(actionChild.GetAction())
+			}
+		case *tools_proto.ActionChild_Command:
+			if actionChild.GetCommand() == nil {
+				action.Children[childKey] = patchChild.ActionChild
+				isPatched = true
+			} else {
+				isPatched = patchChild.GetCommand().Update(actionChild.GetCommand())
+			}
+		}
+
+		// Update the upstream field
+		if slices.Equal(actionChild.GetUpstream(), patchChild.GetUpstream()) {
+			actionChild.Upstream = patchChild.GetUpstream()
+			isPatched = true
+		}
+	}
+
+	return isPatched
+}
+
+// Update the action from json data
+func (action *Action) Unmarshall(raw []byte) error {
+	actionPatch := Action{&tools_proto.Action{}}
+	err := protojson.Unmarshal(raw, &actionPatch)
+	if err != nil {
+		return fmt.Errorf("an error occured when unmarshalling json to action %s: %w", action, err)
+	}
+
+	action.Update(&actionPatch)
+	return nil
+}
+
+// Initialize the action from json file
+func LoadAction(path string) (*Action, error) {
+	actionName := strings.Split(filepath.Base(path), ".")[0]
+	action := Action{&tools_proto.Action{Base: &tools_proto.ToolBase{
+		Name: &actionName,
+	}}}
+
+	fileHandle, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file (%s): %w", path, err)
+	}
+	defer fileHandle.Close()
+
+	// Parse the action data
+	fileData, err := io.ReadAll(fileHandle)
+	if err != nil {
+		return nil, fmt.Errorf("could not read config file (%s): %w", path, err)
+	}
+
+	// Apply the json data
+	err = action.Unmarshall(fileData)
+	if err != nil {
+		return nil, err
+	}
+
+	return &action, nil
 }
