@@ -180,7 +180,7 @@ func TestCommandExecution(t *testing.T) {
 		},
 	}
 
-	err = command.Execute(resolvedContext)
+	err = command.Execute(resolvedContext, nil)
 	if err != nil {
 		t.Errorf("An error occured when executing the command %v: %v", command, err)
 		return

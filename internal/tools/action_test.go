@@ -250,7 +250,7 @@ var actionTraversalTest = Action{
 func TestActionTraversal(t *testing.T) {
 	traversalHistory := []string{}
 	traversalHistoryMutex := &sync.Mutex{}
-	actionTraversalTest.Traverse(func(tool TraversableTool) error {
+	actionTraversalTest.Traverse(func(tool Tool) error {
 		traversalHistoryMutex.Lock()
 		traversalHistory = append(traversalHistory, tool.GetBase().GetName())
 		traversalHistoryMutex.Unlock()

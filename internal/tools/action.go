@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Acedyn/zorro-core/internal/context"
+
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
@@ -58,8 +60,8 @@ func (action *Action) GetChildren() map[string]*ActionChild {
 
 // Find and traverse children that have all their dependencies (upstream)
 // completed.
-func (action *Action) getReadyChildren(pending map[string]bool, completed []string) map[string]TraversableTool {
-	readyChildren := map[string]TraversableTool{}
+func (action *Action) getReadyChildren(pending map[string]bool, completed []string) map[string]Tool {
+	readyChildren := map[string]Tool{}
 	for childKey, child := range action.GetChildren() {
 		// Skip already process children
 		if !pending[childKey] {
@@ -82,7 +84,7 @@ func (action *Action) getReadyChildren(pending map[string]bool, completed []stri
 
 // Run the task to all the children, respecting the order of execution
 // and dependencies. Multiple might can run concurently (the task MUST be threadsafe !)
-func (action *Action) Traverse(task func(TraversableTool) error) error {
+func (action *Action) Traverse(task func(Tool) error) error {
 	// We first traverse this action before traversing its children
 	if err := task(action); err != nil {
 		return fmt.Errorf("Error occured while traversing action %s: %w", action.GetBase().GetName(), err)
@@ -107,9 +109,18 @@ func (action *Action) Traverse(task func(TraversableTool) error) error {
 		for childKey, child := range readyChildren {
 			// All the ready children are executed in their own goroutine
 			pending[childKey] = false
-			go func(childKey string, child TraversableTool) {
+			go func(childKey string, child Tool) {
+				var resultErr error = nil
+
+				switch childValue := child.(type) {
+				case TraversableTool:
+					resultErr = childValue.Traverse(task)
+				default:
+					resultErr = task(child)
+				}
+
 				tasksResults <- &ChildTaskResult{
-					Err: child.Traverse(task),
+					Err: resultErr,
 					Key: childKey,
 				}
 			}(childKey, child)
@@ -132,6 +143,41 @@ func (action *Action) Traverse(task func(TraversableTool) error) error {
 	}
 
 	return nil
+}
+
+// Find a child and its parent in the children tree
+func (action *Action) GetChild(path string) (Tool, TraversableTool) {
+	splittedPath := strings.Split(strings.Trim(path, TOOL_SEPARATOR), TOOL_SEPARATOR)
+	for childName, child := range action.GetChildren() {
+		if childName != splittedPath[0] {
+			continue
+		}
+
+		switch child.GetChild().(type) {
+		case *tools_proto.ActionChild_Command:
+			return child.GetCommand(), action
+		case *tools_proto.ActionChild_Action:
+			// Return the child of the child
+			if len(splittedPath) > 1 {
+				return child.GetAction().GetChild(strings.Join(splittedPath[1:], TOOL_SEPARATOR))
+			} else {
+				return child.GetAction(), action
+			}
+		}
+	}
+	return nil, nil
+}
+
+// Execute all the action's commands respecting the order of execution
+func (action *Action) Execute(c *context.Context) error {
+	return action.Traverse(func(tool Tool) error {
+		switch toolValue := tool.(type) {
+		case *Command:
+			return toolValue.Execute(c, action)
+		default:
+			return nil
+		}
+	})
 }
 
 // Update the action with a patch

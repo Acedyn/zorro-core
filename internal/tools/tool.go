@@ -9,6 +9,8 @@ import (
 	"golang.org/x/text/language"
 )
 
+var TOOL_SEPARATOR string = "/"
+
 // Wrapped tool base with methods attached
 type ToolBase struct {
 	*tools_proto.ToolBase
@@ -22,7 +24,8 @@ type Tool interface {
 // Traversable tool are nested tools linked via dependencies
 type TraversableTool interface {
 	Tool
-	Traverse(func(TraversableTool) error) error
+	Traverse(func(Tool) error) error
+	GetChild(path string) (Tool, TraversableTool)
 }
 
 // Get the wrapped output with all its methods

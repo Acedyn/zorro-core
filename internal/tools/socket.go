@@ -3,12 +3,15 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/life4/genesis/maps"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+var SOCKET_SEPARATOR string = ":"
 
 // Wrapped socket with methods attached
 type Socket struct {
@@ -32,6 +35,11 @@ func (socket *Socket) GetFields() map[string]*Socket {
 	return maps.Map(socket.GetSocket().GetFields(), func(k string, v *tools_proto.Socket) (string, *Socket) {
 		return k, &Socket{v}
 	})
+}
+
+// Find a nested field given a path
+func (socket *Socket) GetField(path string) *Socket {
+	return nil
 }
 
 // Safe setter for the Field field
@@ -129,7 +137,7 @@ func (socket *Socket) UpdateWithMessage(message protoreflect.Message) error {
 }
 
 // Apply the socket's values to a message
-func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message) error {
+func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message, caller TraversableTool) error {
 	messageDescriptor := message.Descriptor()
 	// Gather the values to apply there is two type of values, the one that are applied directly
 	// (jsonPatch) and the ones that will recursively create message fields (nestedSocketPatches)
@@ -149,7 +157,7 @@ func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message) error {
 		if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
 			nestedSocketPatch[socketField] = fieldDescriptor
 		} else {
-			socketRawValue, err := socketField.ResolveRawValue()
+			socketRawValue, err := socketField.ResolveRawValue(caller)
 			if err != nil {
 				return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
 			}
@@ -170,19 +178,34 @@ func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message) error {
 
 	// Apply the nested fields at the end since this won't affect the other fields
 	for socketField, messagePatch := range nestedSocketPatch {
-		socketField.ApplyFieldsToMessage(message.Mutable(messagePatch).Message())
+		socketField.ApplyFieldsToMessage(message.Mutable(messagePatch).Message(), caller)
 	}
 
 	return nil
 }
 
 // Get the raw value after resolving the links
-func (socket *Socket) ResolveRawValue() ([]byte, error) {
-	switch socket.GetValue().(type) {
+func (socket *Socket) ResolveRawValue(parent TraversableTool) ([]byte, error) {
+	switch value := socket.GetValue().(type) {
 	case *tools_proto.Socket_Raw:
 		return socket.GetRaw(), nil
 	case *tools_proto.Socket_Link:
-		return []byte{}, nil
+		if parent == nil {
+			return []byte{}, nil
+		}
+
+		splittedPath := strings.Split(strings.Trim(value.Link, SOCKET_SEPARATOR), SOCKET_SEPARATOR)
+		child, parent := parent.GetChild(splittedPath[0])
+		if child == nil {
+			return []byte{}, nil
+		}
+
+		childOutput := child.GetBase().GetOutput()
+		if len(splittedPath) < 1 {
+			return childOutput.ResolveRawValue(parent)
+		} else {
+			return childOutput.GetField(splittedPath[1]).ResolveRawValue(parent)
+		}
 	default:
 		return []byte{}, nil
 	}

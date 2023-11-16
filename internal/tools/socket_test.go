@@ -161,7 +161,7 @@ func TestSocketApplyFields(t *testing.T) {
 	})
 
 	message = dynamicpb.NewMessage(socketValueDescriptor)
-	err = socket.ApplyFieldsToMessage(message)
+	err = socket.ApplyFieldsToMessage(message, nil)
 	if err != nil {
 		t.Errorf("An error occured while applying the socket values to a message: %v", err)
 		return
