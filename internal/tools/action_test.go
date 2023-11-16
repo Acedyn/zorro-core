@@ -1,17 +1,35 @@
 package tools
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/Acedyn/zorro-core/internal/context"
+	"github.com/Acedyn/zorro-core/internal/network"
+
+	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
+	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
-
-	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 )
+
+func getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
+}
 
 // Test the resolution of the children that are ready to be traversed
 type GetReadyChildrenTest struct {
@@ -310,4 +328,45 @@ func TestActionUnmarshall(t *testing.T) {
 	if _, logAExexists := action.GetChildren()["log_a"]; !logAExexists {
 		t.Errorf("Expected a child at key 'log_a' in the unmarshaled action")
 	}
+}
+
+func WIPTestActionExecution(t *testing.T) {
+	host := "127.0.0.1"
+	port, err := getFreePort()
+
+	if err != nil {
+		t.Errorf("Could not get free port: %s", err.Error())
+	}
+
+	// Start the server in its own goroutine
+	go func() {
+		_, grpcStatus := network.GrpcServer()
+		if grpcStatus.IsRunning {
+			return
+		}
+		if err := network.ServeGrpc(host, port); err != nil {
+			t.Errorf("An error occured while serving GRPC: %s", err.Error())
+		}
+	}()
+
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		t.Errorf("Could not get the current working directory: %v", err)
+		return
+	}
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	action_path := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
+
+	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
+	resolvedContext, err := context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
+		Repos: []string{fullPath},
+	}})
+
+	action, err := LoadAction(action_path)
+	if err != nil {
+		t.Errorf("An error occured when loading the action at path %s: %v", action_path, err)
+	}
+
+	err = action.Execute(resolvedContext)
+	t.Error(err)
 }

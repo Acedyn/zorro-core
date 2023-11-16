@@ -28,8 +28,8 @@ func mockedSocketValueDescriptor(name string) (protoreflect.MessageDescriptor, e
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 	fileName := "log.proto"
-	rootPath := filepath.Join(cwdPath, "testdata", "mocked_plugins", "python", "python@3.10", "zorro_python", "commands", "log")
-	importPath := filepath.Join(cwdPath, "testdata", "mocked_plugins", "python", "python@3.10", "protos")
+	rootPath := filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "zorro_python", "commands", "log")
+	importPath := filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "protos")
 
 	compiler := protocompile.Compiler{
 		Resolver: &protocompile.SourceResolver{
@@ -93,7 +93,7 @@ func TestProcessorRegistration(t *testing.T) {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins")
+	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
 
 	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
 		Repos: []string{fullPath},
@@ -141,7 +141,7 @@ func TestCommandExecution(t *testing.T) {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "testdata", "mocked_plugins")
+	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
 
 	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
 		Repos: []string{fullPath},

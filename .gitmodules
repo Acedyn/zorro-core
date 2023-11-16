@@ -1,3 +1,3 @@
-[submodule "testdata/mocked_plugins/python/python@3.10/protos"]
-	path = testdata/mocked_plugins/python/python@3.10/protos
+[submodule "testdata/plugins/python/python@3.10/protos"]
+	path = testdata/plugins/python/python@3.10/protos
 	url = https://github.com/Acedyn/zorro-proto.git

@@ -1,0 +1,57 @@
+{
+  "base": {
+    "input": {
+      "fields": {
+        "input_message_a": {
+          "kind": "string"
+        },
+        "input_message_b": {
+          "kind": "int"
+        }
+      }
+    },
+    "tooltip": "simple action for testing purpose"
+  },
+  "children": {
+    "log_a": {
+      "command": {
+        "base": {
+          "name": "zorro_python.Log",
+          "label": "Log A",
+          "input": {
+            "fields": {
+              "message": {
+                "raw": "SGVsbG8gTG9nIEEgZnJvbSB0aGUgZm9vIGFjdGlvbg=="
+              },
+              "level": {
+                "raw": "MQ=="
+              }
+            }
+          }
+        }
+      }
+    },
+    "log_b": {
+      "upstream": ["log_a"],
+      "command": {
+        "base": {
+          "name": "zorro_python.Log",
+          "label": "Log B",
+          "input": {
+            "fields": {
+              "message": {
+                "link": "./log_a/message"
+              },
+              "level": {
+                "raw": "MA=="
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+

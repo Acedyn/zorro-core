@@ -20,7 +20,7 @@ func mockedSocketValueDescriptor(name string) (protoreflect.MessageDescriptor, e
 		return nil, fmt.Errorf("could not get the current working directory: %w", err)
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "testdata", "mocked_protos", "socket_value.proto")
+	fullPath := filepath.Join(cwdPath, "testdata", "protos", "socket_value.proto")
 
 	reader, err := os.Open(fullPath)
 	if err != nil {
