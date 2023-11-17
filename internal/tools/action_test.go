@@ -1,4 +1,4 @@
-package tools
+package tools_test
 
 import (
 	"net"
@@ -10,6 +10,8 @@ import (
 
 	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/network"
+	_ "github.com/Acedyn/zorro-core/internal/scheduling"
+	"github.com/Acedyn/zorro-core/internal/tools"
 
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
@@ -109,8 +111,8 @@ var getReadyChildrenTests = []GetReadyChildrenTest{
 
 func TestGetReadyChildren(t *testing.T) {
 	for _, getReadyChildrenTest := range getReadyChildrenTests {
-		action := Action{Action: getReadyChildrenTest.Action}
-		readyChildren := action.getReadyChildren(
+		action := tools.Action{Action: getReadyChildrenTest.Action}
+		readyChildren := action.GetReadyChildren(
 			getReadyChildrenTest.Pending,
 			getReadyChildrenTest.Completed,
 		)
@@ -124,7 +126,7 @@ func TestGetReadyChildren(t *testing.T) {
 }
 
 // Test the action traversal order
-var actionTraversalTest = Action{
+var actionTraversalTest = tools.Action{
 	Action: &tools_proto.Action{
 		Base: &tools_proto.ToolBase{
 			Name: &[]string{"0"}[0],
@@ -268,7 +270,7 @@ var actionTraversalTest = Action{
 func TestActionTraversal(t *testing.T) {
 	traversalHistory := []string{}
 	traversalHistoryMutex := &sync.Mutex{}
-	actionTraversalTest.Traverse(func(tool Tool) error {
+	actionTraversalTest.Traverse(func(tool tools.Tool) error {
 		traversalHistoryMutex.Lock()
 		traversalHistory = append(traversalHistory, tool.GetBase().GetName())
 		traversalHistoryMutex.Unlock()
@@ -308,7 +310,7 @@ func TestActionUnmarshall(t *testing.T) {
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
 	action_path := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
 
-	action, err := LoadAction(action_path)
+	action, err := tools.LoadAction(action_path)
 	if err != nil {
 		t.Errorf("An error occured when loading the action at path %s: %v", action_path, err)
 	}
@@ -330,7 +332,7 @@ func TestActionUnmarshall(t *testing.T) {
 	}
 }
 
-func WIPTestActionExecution(t *testing.T) {
+func TestActionExecution(t *testing.T) {
 	host := "127.0.0.1"
 	port, err := getFreePort()
 
@@ -355,18 +357,35 @@ func WIPTestActionExecution(t *testing.T) {
 		return
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	action_path := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
+	action_path := filepath.Join(cwdPath, "testdata", "actions", "bar.json")
 
 	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
 	resolvedContext, err := context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
 		Repos: []string{fullPath},
 	}})
 
-	action, err := LoadAction(action_path)
+	action, err := tools.LoadAction(action_path)
 	if err != nil {
 		t.Errorf("An error occured when loading the action at path %s: %v", action_path, err)
+		return
 	}
 
+	action.GetBase().GetInput().GetField("prefixMessage").Update(&tools.Socket{
+		&tools_proto.Socket{
+			Value: &tools_proto.Socket_Raw{Raw: []byte("\" it's me\"")},
+		},
+	})
 	err = action.Execute(resolvedContext)
-	t.Error(err)
+	if err != nil {
+		t.Errorf("An error occured when executing the action %s: %v", action.GetBase().GetName(), err)
+	}
+
+	actionOutput, err := action.GetBase().GetOutput().ResolveRawValue(action)
+	if err != nil {
+		t.Errorf("Could not resovle the action %s's output: %v", action.GetBase().GetName(), err)
+	}
+
+	if string(actionOutput) != "\"DEBUG: hello it's me\"" {
+		t.Errorf("Expected action output to be \"hello it's me\", received \"%s\"", string(actionOutput))
+	}
 }

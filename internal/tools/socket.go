@@ -39,7 +39,15 @@ func (socket *Socket) GetFields() map[string]*Socket {
 
 // Find a nested field given a path
 func (socket *Socket) GetField(path string) *Socket {
-	return nil
+	splittedPath := strings.Split(strings.Trim(path, TOOL_SEPARATOR), TOOL_SEPARATOR)
+	field, ok := socket.GetFields()[splittedPath[0]]
+	if !ok {
+		return nil
+	} else if len(splittedPath) > 1 {
+		return field.GetField(strings.Join(splittedPath[1:len(splittedPath)-1], TOOL_SEPARATOR))
+	} else {
+		return field
+	}
 }
 
 // Safe setter for the Field field
@@ -171,7 +179,6 @@ func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message, caller 
 		return fmt.Errorf("invalid raw message %s: %w", jsonPatch, err)
 	}
 	err = protojson.Unmarshal(encodedJsonPatch, message.Interface())
-	fmt.Println(string(encodedJsonPatch))
 	if err != nil {
 		return fmt.Errorf("an error occured while applying json patch %s on message %s: %w", encodedJsonPatch, message, err)
 	}
@@ -191,20 +198,29 @@ func (socket *Socket) ResolveRawValue(parent TraversableTool) ([]byte, error) {
 		return socket.GetRaw(), nil
 	case *tools_proto.Socket_Link:
 		if parent == nil {
-			return []byte{}, nil
+			return []byte{}, fmt.Errorf("cannot resolve socket link value without parent")
 		}
 
-		splittedPath := strings.Split(strings.Trim(value.Link, SOCKET_SEPARATOR), SOCKET_SEPARATOR)
+		splittedPath := strings.Split(value.Link, SOCKET_SEPARATOR)
 		child, parent := parent.GetChild(splittedPath[0])
 		if child == nil {
-			return []byte{}, nil
+			return []byte{}, fmt.Errorf("could not find child at path \"%s\"", splittedPath[0])
 		}
 
 		childOutput := child.GetBase().GetOutput()
+		if child == parent {
+			childOutput = child.GetBase().GetInput()
+		}
+
 		if len(splittedPath) < 1 {
 			return childOutput.ResolveRawValue(parent)
 		} else {
-			return childOutput.GetField(splittedPath[1]).ResolveRawValue(parent)
+			childField := childOutput.GetField(splittedPath[1])
+			if childField == nil {
+				return []byte{}, fmt.Errorf("the child %s does not have a field at path \"%s\"", childOutput, splittedPath[1])
+			} else {
+				return childField.ResolveRawValue(parent)
+			}
 		}
 	default:
 		return []byte{}, nil

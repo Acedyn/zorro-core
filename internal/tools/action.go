@@ -60,7 +60,7 @@ func (action *Action) GetChildren() map[string]*ActionChild {
 
 // Find and traverse children that have all their dependencies (upstream)
 // completed.
-func (action *Action) getReadyChildren(pending map[string]bool, completed []string) map[string]Tool {
+func (action *Action) GetReadyChildren(pending map[string]bool, completed []string) map[string]Tool {
 	readyChildren := map[string]Tool{}
 	for childKey, child := range action.GetChildren() {
 		// Skip already process children
@@ -105,7 +105,7 @@ func (action *Action) Traverse(task func(Tool) error) error {
 			errors = append(errors, taskResult.Err)
 		}
 
-		readyChildren := action.getReadyChildren(pending, completed)
+		readyChildren := action.GetReadyChildren(pending, completed)
 		for childKey, child := range readyChildren {
 			// All the ready children are executed in their own goroutine
 			pending[childKey] = false
@@ -147,6 +147,10 @@ func (action *Action) Traverse(task func(Tool) error) error {
 
 // Find a child and its parent in the children tree
 func (action *Action) GetChild(path string) (Tool, TraversableTool) {
+	if len(path) == 0 {
+		return action, action
+	}
+
 	splittedPath := strings.Split(strings.Trim(path, TOOL_SEPARATOR), TOOL_SEPARATOR)
 	for childName, child := range action.GetChildren() {
 		if childName != splittedPath[0] {

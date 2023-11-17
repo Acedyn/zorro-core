@@ -1,38 +1,43 @@
 {
   "base": {
+    "label": "The bar action",
     "input": {
       "fields": {
-        "input_message_a": {
-          "kind": "string"
-        },
-        "input_message_b": {
-          "kind": "int"
+        "prefixMessage": {
+          "kind": "string",
+          "raw": "IiB3b3JsZCI="
         }
       }
+    },
+    "output": {
+      "link": "log:message"
     },
     "tooltip": "simple action for testing purpose"
   },
   "children": {
-    "log_a": {
+    "concat": {
       "command": {
         "base": {
-          "name": "zorro_python.Log",
-          "label": "Log A",
+          "name": "zorro_python.ConcatStr",
+          "label": "Concat strings",
           "input": {
             "fields": {
-              "message": {
-                "raw": "SGVsbG8gTG9nIEEgZnJvbSB0aGUgZm9vIGFjdGlvbg=="
+              "stringA": {
+                "raw": "ImhlbGxvIg=="
               },
-              "level": {
-                "raw": "MQ=="
+              "stringB": {
+                "link": ":prefixMessage"
               }
             }
           }
+        },
+        "processor_query": {
+          "name": "python"
         }
       }
     },
-    "log_b": {
-      "upstream": ["log_a"],
+    "log": {
+      "upstream": ["concat"],
       "command": {
         "base": {
           "name": "zorro_python.Log",
@@ -40,13 +45,16 @@
           "input": {
             "fields": {
               "message": {
-                "link": "./log_a/message"
+                "link": "concat:string"
               },
               "level": {
                 "raw": "MA=="
               }
             }
           }
+        },
+        "processor_query": {
+          "name": "python"
         }
       }
     }

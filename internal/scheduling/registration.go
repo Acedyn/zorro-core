@@ -78,7 +78,7 @@ func (processor *RegisteredProcessor) ProcessCommand(commandQuery *tools.Command
 
 		err := commandQuery.Command.SetOutput(outputMessage)
 		if err != nil {
-			return fmt.Errorf("an error occured when receiving response by processor at host %s: %w", processor.Host, err)
+			return fmt.Errorf("an error occured when setting response by processor at host %s: %w", processor.Host, err)
 		}
 	}
 

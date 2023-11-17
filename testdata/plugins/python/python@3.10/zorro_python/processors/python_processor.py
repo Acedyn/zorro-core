@@ -72,7 +72,7 @@ def discover_commands(server: grpc.Server, commands: List[Path]):
             service_names.append(service_name)
             logger.info("Service %s registered", service_name)
 
-        reflection.enable_server_reflection(service_names, server)
+    reflection.enable_server_reflection(service_names, server)
 
 
 def register_processor(

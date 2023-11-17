@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -76,7 +77,7 @@ func (client *ReflectionClient) ListFileDescriptors() ([]*descriptorpb.FileDescr
 		return nil, fmt.Errorf("could not get service names: %w", err)
 	}
 
-	fileDescriptors := []*descriptorpb.FileDescriptorProto{}
+	fileDescriptors := map[string]*descriptorpb.FileDescriptorProto{}
 
 	for _, serviceName := range serviceList {
 		response, err := client.reflectionRequest(&grpc_reflection.ServerReflectionRequest{
@@ -101,11 +102,11 @@ func (client *ReflectionClient) ListFileDescriptors() ([]*descriptorpb.FileDescr
 				return nil, fmt.Errorf("invalid proto file format at file descriptor for symbol %s: %w", serviceName.GetName(), err)
 			}
 
-			fileDescriptors = append(fileDescriptors, fileDescriptor)
+			fileDescriptors[fileDescriptor.GetName()] = fileDescriptor
 		}
 	}
 
-	return fileDescriptors, nil
+	return maps.Values(fileDescriptors), nil
 }
 
 func (client *ReflectionClient) registerFileDescriptors() error {
@@ -227,7 +228,7 @@ func NewReflectedClient(host string) (*ReflectionClient, error) {
 	// Fetch all the available methods
 	err = reflectedClient.registerFileDescriptors()
 	if err != nil {
-		return nil, fmt.Errorf("Could not initialize reflected client: %w", err)
+		return nil, fmt.Errorf("could not initialize reflected client: %w", err)
 	}
 
 	return reflectedClient, nil
