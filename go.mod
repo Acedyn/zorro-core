@@ -15,6 +15,7 @@ require (
 require (
 	github.com/bufbuild/protocompile v0.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/teamortix/golang-wasm/wasm v0.0.0-20230719150929-5d000994c833 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
