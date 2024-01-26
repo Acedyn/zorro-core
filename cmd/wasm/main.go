@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/Acedyn/zorro-core/pkg/manager"
+
 	"github.com/teamortix/golang-wasm/wasm"
 )
 
@@ -9,7 +11,8 @@ func add(x int, y int) (int, error) {
 }
 
 func main() {
-	wasm.Expose("add", add)
+	wasm.Expose("invokeAction", manager.InvokeAction)
+	wasm.Expose("listActions", manager.InvokeAction)
 	wasm.Ready()
 	<-make(chan struct{}, 0)
 }

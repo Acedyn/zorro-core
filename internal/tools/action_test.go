@@ -308,11 +308,11 @@ func TestActionUnmarshall(t *testing.T) {
 		return
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	action_path := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
+	actionPath := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
 
-	action, err := tools.LoadAction(action_path)
+	action, err := tools.LoadAction(actionPath)
 	if err != nil {
-		t.Errorf("An error occured when loading the action at path %s: %v", action_path, err)
+		t.Errorf("An error occured when loading the action at path %s: %v", actionPath, err)
 	}
 
 	if action.GetBase().GetName() != "foo" {
@@ -357,16 +357,16 @@ func TestActionExecution(t *testing.T) {
 		return
 	}
 	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	action_path := filepath.Join(cwdPath, "testdata", "actions", "bar.json")
+	actionPath := filepath.Join(cwdPath, "testdata", "actions", "bar.json")
 
 	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
 	resolvedContext, err := context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
 		Repos: []string{fullPath},
 	}})
 
-	action, err := tools.LoadAction(action_path)
+	action, err := tools.LoadAction(actionPath)
 	if err != nil {
-		t.Errorf("An error occured when loading the action at path %s: %v", action_path, err)
+		t.Errorf("An error occured when loading the action at path %s: %v", actionPath, err)
 		return
 	}
 

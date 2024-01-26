@@ -73,6 +73,20 @@ func (context *Context) AvailableCommandPaths(processor *processor.Processor) []
 	return availableCommands
 }
 
+// Flatten list of all the commands present in the selected plugins that can be executed by the given processor
+func (context *Context) AvailableActions() map[string]string {
+	availableActions := map[string]string{}
+
+	for _, plugin := range context.GetPlugins() {
+		for _, actionDeclaration := range plugin.GetTools().GetActions() {
+			actionName := strings.Split(filepath.Base(actionDeclaration.GetPath()), ".")[0]
+			availableActions[actionName] = actionDeclaration.GetPath()
+		}
+	}
+
+	return availableActions
+}
+
 // Flatten list of all the processors present in the selected plugins
 func (context *Context) AvailableProcessors() []*processor.Processor {
 	availableProcessors := []*processor.Processor{}

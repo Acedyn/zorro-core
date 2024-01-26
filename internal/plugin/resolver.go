@@ -16,7 +16,7 @@ import (
 // Find all available plugin versions with the given name
 func FindPluginVersions(name string, pluginConfig *config_proto.PluginConfig) []*Plugin {
 	if pluginConfig == nil {
-		pluginConfig = config.AppConfig().PluginConfig
+		pluginConfig = config.GlobalConfig().PluginConfig
 	}
 	versions := []*Plugin{}
 
@@ -250,7 +250,7 @@ func resolvePluginGraph(
 // Resolve a flat list of plugin that satisfies the given query
 func ResolvePlugins(query []string, pluginConfig *config_proto.PluginConfig) ([]*Plugin, error) {
 	if pluginConfig == nil {
-		pluginConfig = config.AppConfig().PluginConfig
+		pluginConfig = config.GlobalConfig().PluginConfig
 	}
 
 	initialQuandidates := GetQueryMatchingPlugins(query, pluginConfig)

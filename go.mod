@@ -3,7 +3,7 @@ module github.com/Acedyn/zorro-core
 go 1.21.1
 
 require (
-	github.com/Acedyn/zorro-proto v0.0.0-20231109162951-18bdaa83171f
+	github.com/Acedyn/zorro-proto v0.0.0-20240126144308-c0bdf24181ab
 	github.com/google/uuid v1.3.1
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/life4/genesis v1.9.0

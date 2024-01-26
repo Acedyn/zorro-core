@@ -3,8 +3,8 @@ package config
 import (
 	"sync"
 
-	"golang.org/x/text/language"
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
+	"golang.org/x/text/language"
 )
 
 var (
@@ -13,12 +13,20 @@ var (
 )
 
 // Getter for the config singleton
-func AppConfig() *config_proto.Config {
+func GlobalConfig() *config_proto.Config {
 	once.Do(func() {
 		// TODO: Get the config from somewhere on the computer
 		config = &config_proto.Config{
 			UserPreferences: &config_proto.UserConfig{
 				Language: config_proto.Language_English,
+			},
+			PluginConfig: &config_proto.PluginConfig{
+				DefaultRequire: []string{},
+				Repos:          []string{},
+			},
+			NetworkConfig: &config_proto.NetworkConfig{
+				GRPCPort: 8686,
+				GRPCHost: "127.0.0.1",
 			},
 		}
 	})
@@ -28,7 +36,7 @@ func AppConfig() *config_proto.Config {
 
 // Get the language set in the config
 func GetLanguage() language.Tag {
-	config = AppConfig()
+	config = GlobalConfig()
 
 	switch config.UserPreferences.Language {
 	case config_proto.Language_English:
