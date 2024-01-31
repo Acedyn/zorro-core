@@ -7,7 +7,6 @@ import (
 	"github.com/Acedyn/zorro-core/internal/tools"
 
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
-
 	"github.com/life4/genesis/maps"
 )
 
@@ -34,6 +33,10 @@ func InvokeAction(name string, pluginQuery []string, customConfig *config_proto.
 	if err != nil {
 		return fmt.Errorf("an error occured when loading the action at path %s: %w", actionPath, err), nil
 	}
+
+	// Register the action to the list of invoked tools
+	invokedTools := InvokedActions()
+	invokedTools = append(invokedTools, action)
 
 	return nil, action
 }

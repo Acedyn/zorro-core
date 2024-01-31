@@ -7,21 +7,26 @@ import (
 )
 
 var (
-	invokedTools []tools.Tool
-	once         sync.Once
+	invokedActions  []*tools.Action
+	onceActions     sync.Once
+	invokedCommands []*tools.Command
+	onceCommands    sync.Once
 )
 
-// Getter for the invoked tools singleton which holds the tools that have been invoked
-func InvokedTools() []tools.Tool {
-	once.Do(func() {
-		invokedTools = []tools.Tool{}
+// Getter for the invoked commands singleton
+func InvokedCommands() []*tools.Command {
+	onceCommands.Do(func() {
+		invokedCommands = []*tools.Command{}
 	})
 
-	return invokedTools
+	return invokedCommands
 }
 
-func RetrieveActions() []tools.Action {
-	actions := []tools.Action{}
+// Getter for the invoked actions singleton
+func InvokedActions() []*tools.Action {
+	onceActions.Do(func() {
+		invokedActions = []*tools.Action{}
+	})
 
-	return actions
+	return invokedActions
 }

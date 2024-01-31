@@ -12,7 +12,7 @@ func add(x int, y int) (int, error) {
 
 func main() {
 	wasm.Expose("invokeAction", manager.InvokeAction)
-	wasm.Expose("listActions", manager.InvokeAction)
+	wasm.Expose("getInvokedActions", manager.InvokedActions)
 	wasm.Ready()
 	<-make(chan struct{}, 0)
 }
