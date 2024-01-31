@@ -1,15 +1,16 @@
-package scheduling
+package scheduling_test
 
 import (
 	"testing"
 
 	"github.com/Acedyn/zorro-core/internal/processor"
+	"github.com/Acedyn/zorro-core/internal/scheduling"
 
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 )
 
-var processorQuery = ProcessorQuery{
+var processorQuery = scheduling.ProcessorQuery{
 	ProcessorQuery: &scheduling_proto.ProcessorQuery{
 		Name:    &[]string{"foo"}[0],
 		Version: &[]string{"0.2.3"}[0],

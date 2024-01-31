@@ -17,12 +17,12 @@ import (
 var (
 	processorPoolLock = &sync.Mutex{}
 	processorPool     map[string]*RegisteredProcessor
-	once              sync.Once
+	onceProcessorPool sync.Once
 )
 
 // Getter for the clients pool singleton
 func ProcessorPool() map[string]*RegisteredProcessor {
-	once.Do(func() {
+	onceProcessorPool.Do(func() {
 		processorPool = map[string]*RegisteredProcessor{}
 	})
 

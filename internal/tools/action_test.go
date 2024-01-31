@@ -10,7 +10,7 @@ import (
 
 	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/network"
-	_ "github.com/Acedyn/zorro-core/internal/scheduling"
+	"github.com/Acedyn/zorro-core/internal/scheduling"
 	"github.com/Acedyn/zorro-core/internal/tools"
 
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
@@ -388,4 +388,10 @@ func TestActionExecution(t *testing.T) {
 	if string(actionOutput) != "\"DEBUG: hello it's me\"" {
 		t.Errorf("Expected action output to be \"hello it's me\", received \"%s\"", string(actionOutput))
 	}
+}
+
+func init() {
+	// Make sure the subprocess scheduler is initialized
+	scheduling.InitializeAvailableSchedulers()
+	go scheduling.ListenCommandQueries()
 }

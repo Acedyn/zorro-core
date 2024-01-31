@@ -1,4 +1,4 @@
-package scheduling
+package scheduling_test
 
 import (
 	"context"
@@ -9,15 +9,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	zorro_context "github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/network"
+	"github.com/Acedyn/zorro-core/internal/scheduling"
 	"github.com/Acedyn/zorro-core/internal/tools"
-	"github.com/life4/genesis/maps"
 
+	zorro_context "github.com/Acedyn/zorro-core/internal/context"
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/bufbuild/protocompile"
+	"github.com/life4/genesis/maps"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -62,7 +63,7 @@ func getFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-var pythonProcessorQuery = ProcessorQuery{
+var pythonProcessorQuery = scheduling.ProcessorQuery{
 	ProcessorQuery: &scheduling_proto.ProcessorQuery{
 		Name: &[]string{"python"}[0],
 	},
@@ -104,7 +105,7 @@ func TestProcessorRegistration(t *testing.T) {
 		return
 	}
 
-	_, err = GetOrStartProcessor(resolvedContext, &pythonProcessorQuery)
+	_, err = scheduling.GetOrStartProcessor(resolvedContext, &pythonProcessorQuery)
 	if err != nil {
 		t.Errorf("An error occured while getting processor from query %s: %s", processorQuery, err.Error())
 		return
@@ -191,4 +192,10 @@ func TestCommandExecution(t *testing.T) {
 		t.Errorf("Expected to find \"%s\" in log message after log command: found %v", expectedLog, command.GetBase().GetLogs())
 		return
 	}
+}
+
+func init() {
+	// Make sure the subprocess scheduler is initialized
+	scheduling.InitializeAvailableSchedulers()
+	go scheduling.ListenCommandQueries()
 }
