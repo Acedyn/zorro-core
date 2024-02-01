@@ -21,6 +21,10 @@ func FindPluginVersions(name string, pluginConfig *config_proto.PluginConfig) []
 	versions := []*Plugin{}
 
 	for _, pluginSearchPath := range pluginConfig.GetRepos() {
+		if _, err := os.Stat(pluginSearchPath); os.IsNotExist(err) {
+			continue
+		}
+
 		err := filepath.WalkDir(pluginSearchPath, func(path string, f os.DirEntry, _ error) error {
 			pathStem := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
 			if pathStem == PLUGIN_DEFINITION_NAME {

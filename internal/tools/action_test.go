@@ -10,8 +10,9 @@ import (
 
 	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/network"
-	"github.com/Acedyn/zorro-core/internal/scheduling"
 	"github.com/Acedyn/zorro-core/internal/tools"
+	"github.com/Acedyn/zorro-core/pkg/scheduling"
+	_ "github.com/Acedyn/zorro-core/pkg/scheduling/subprocess"
 
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"

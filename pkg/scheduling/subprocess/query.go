@@ -1,4 +1,4 @@
-package scheduling
+package subprocess
 
 import (
 	"github.com/Acedyn/zorro-core/internal/context"

@@ -1,4 +1,4 @@
-package scheduling
+package subprocess
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/Acedyn/zorro-core/internal/processor"
 	"github.com/Acedyn/zorro-core/internal/reflection"
 	"github.com/Acedyn/zorro-core/internal/tools"
+	"github.com/Acedyn/zorro-core/pkg/scheduling"
 
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
@@ -45,8 +46,8 @@ type SubprocessScheduler struct {
 }
 
 // Identifiers used to match againts the scheduler query
-func (*SubprocessScheduler) GetInfo() SchedulerInfo {
-	return SchedulerInfo{
+func (*SubprocessScheduler) GetInfo() scheduling.SchedulerInfo {
+	return scheduling.SchedulerInfo{
 		Name: "subprocess",
 	}
 }
@@ -75,5 +76,5 @@ func (subprocessScheduler *SubprocessScheduler) Initialize() {
 // Register the subprocess scheduler to the list of available schedulers
 func init() {
 	subprocessScheduler := &SubprocessScheduler{}
-	AvailableSchedulers()[subprocessScheduler.GetInfo().Name] = subprocessScheduler
+	scheduling.AvailableSchedulers()[subprocessScheduler.GetInfo().Name] = subprocessScheduler
 }

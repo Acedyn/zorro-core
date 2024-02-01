@@ -1,4 +1,4 @@
-package scheduling_test
+package subprocess_test
 
 import (
 	"context"
@@ -10,8 +10,9 @@ import (
 	"testing"
 
 	"github.com/Acedyn/zorro-core/internal/network"
-	"github.com/Acedyn/zorro-core/internal/scheduling"
 	"github.com/Acedyn/zorro-core/internal/tools"
+	"github.com/Acedyn/zorro-core/pkg/scheduling"
+	"github.com/Acedyn/zorro-core/pkg/scheduling/subprocess"
 
 	zorro_context "github.com/Acedyn/zorro-core/internal/context"
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
@@ -27,7 +28,7 @@ func mockedSocketValueDescriptor(name string) (protoreflect.MessageDescriptor, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get the current working directory: %w", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))))
 	fileName := "log.proto"
 	rootPath := filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "zorro_python", "commands", "log")
 	importPath := filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "protos")
@@ -63,7 +64,7 @@ func getFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-var pythonProcessorQuery = scheduling.ProcessorQuery{
+var pythonProcessorQuery = subprocess.ProcessorQuery{
 	ProcessorQuery: &scheduling_proto.ProcessorQuery{
 		Name: &[]string{"python"}[0],
 	},
@@ -93,7 +94,7 @@ func TestProcessorRegistration(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))))
 	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
 
 	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
@@ -105,7 +106,7 @@ func TestProcessorRegistration(t *testing.T) {
 		return
 	}
 
-	_, err = scheduling.GetOrStartProcessor(resolvedContext, &pythonProcessorQuery)
+	_, err = subprocess.GetOrStartProcessor(resolvedContext, &pythonProcessorQuery)
 	if err != nil {
 		t.Errorf("An error occured while getting processor from query %s: %s", processorQuery, err.Error())
 		return
@@ -141,7 +142,7 @@ func TestCommandExecution(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	cwdPath = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))))
 	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
 
 	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
