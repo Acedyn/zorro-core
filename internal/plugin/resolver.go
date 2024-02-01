@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Acedyn/zorro-core/internal/config"
 	"github.com/Acedyn/zorro-core/internal/utils"
+	"github.com/Acedyn/zorro-core/pkg/config"
 
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	"github.com/life4/genesis/slices"

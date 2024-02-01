@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Acedyn/zorro-core/internal/config"
 	"github.com/Acedyn/zorro-core/internal/processor"
+	"github.com/Acedyn/zorro-core/pkg/config"
 
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 	processor_proto "github.com/Acedyn/zorro-proto/zorroprotos/processor"
