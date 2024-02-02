@@ -1,7 +1,6 @@
 package subprocess
 
 import (
-	"github.com/Acedyn/zorro-core/internal/context"
 	"github.com/Acedyn/zorro-core/internal/processor"
 
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
@@ -11,11 +10,6 @@ import (
 // Wrapped processor query with methods attached
 type ProcessorQuery struct {
 	*scheduling_proto.ProcessorQuery
-}
-
-// Get the wrapped context with all its methods
-func (query *ProcessorQuery) GetContext() *context.Context {
-	return &context.Context{Context: query.ProcessorQuery.GetContext()}
 }
 
 // Test if a client matches the query's requirements

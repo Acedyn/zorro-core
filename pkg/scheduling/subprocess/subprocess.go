@@ -14,12 +14,12 @@ import (
 	scheduling_proto "github.com/Acedyn/zorro-proto/zorroprotos/scheduling"
 )
 
-type schedulingServer struct {
-	scheduling_proto.UnimplementedSchedulingServer
+type subprocessSchedulingServer struct {
+	scheduling_proto.UnimplementedSubprocessSchedulingServer
 }
 
 // As soon as a processor starts, it has to registers itself
-func (service *schedulingServer) RegisterProcessor(c context.Context, processorRegistration *scheduling_proto.ProcessorRegistration) (*processor_proto.Processor, error) {
+func (service *subprocessSchedulingServer) RegisterProcessor(c context.Context, processorRegistration *scheduling_proto.ProcessorRegistration) (*processor_proto.Processor, error) {
 	// TODO: Handle closing the connection when the processor deregisters
 	reflectedClient, err := reflection.NewReflectedClient(processorRegistration.GetHost())
 	if err != nil {
@@ -42,7 +42,7 @@ func (service *schedulingServer) RegisterProcessor(c context.Context, processorR
 // The suprocess scheduler will send command queries to suprocesses via gRPC
 type SubprocessScheduler struct {
 	grpcStatus       *network.GrpcServerStatus
-	schedulingServer *schedulingServer
+	schedulingServer *subprocessSchedulingServer
 }
 
 // Identifiers used to match againts the scheduler query
@@ -69,8 +69,8 @@ func (*SubprocessScheduler) ScheduleCommand(commandQuery *tools.CommandQuery) {
 func (subprocessScheduler *SubprocessScheduler) Initialize() {
 	grpcServer, grpcStatus := network.GrpcServer()
 	subprocessScheduler.grpcStatus = grpcStatus
-	subprocessScheduler.schedulingServer = &schedulingServer{}
-	scheduling_proto.RegisterSchedulingServer(grpcServer, subprocessScheduler.schedulingServer)
+	subprocessScheduler.schedulingServer = &subprocessSchedulingServer{}
+	scheduling_proto.RegisterSubprocessSchedulingServer(grpcServer, subprocessScheduler.schedulingServer)
 }
 
 // Register the subprocess scheduler to the list of available schedulers

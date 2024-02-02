@@ -103,7 +103,7 @@ def register_processor(
     with grpc.insecure_channel(zorro_core_url) as channel:
         global python_processor
         logger.info("Registering processor with url %s", processor_url)
-        stub = scheduler_pb2_grpc.SchedulingStub(channel)
+        stub = scheduler_pb2_grpc.SubprocessSchedulingStub(channel)
 
         # Set the values of the processor to patch
         python_processor.id = processor_id

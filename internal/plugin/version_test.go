@@ -21,7 +21,7 @@ func TestVersionComparison(t *testing.T) {
 	for comparison, expectedResult := range versionComparisonsTests {
 		result := CompareVersions(comparison.a, comparison.b)
 		if result != expectedResult {
-			t.Errorf("invalid version comparison result: %s %s %s (expected: %s)", comparison.a, result, comparison.b, expectedResult)
+			t.Errorf("Invalid version comparison result: %s %s %s (expected: %s)", comparison.a, result, comparison.b, expectedResult)
 		}
 	}
 }

@@ -155,8 +155,6 @@ func TestCommandExecution(t *testing.T) {
 	}
 
 	processorQuery := pythonProcessorQuery
-	processorQuery.Context = resolvedContext.Context
-
 	commandMessage := "Hello Zorro"
 	commandRawMessage, err := json.Marshal(commandMessage)
 	if err != nil {

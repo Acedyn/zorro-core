@@ -3,7 +3,7 @@ module github.com/Acedyn/zorro-core
 go 1.21.1
 
 require (
-	github.com/Acedyn/zorro-proto v0.0.0-20240126144308-c0bdf24181ab
+	github.com/Acedyn/zorro-proto v0.0.0-20240202114050-7ed1569584cb
 	github.com/google/uuid v1.3.1
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/life4/genesis v1.9.0
@@ -15,6 +15,7 @@ require (
 require (
 	github.com/bufbuild/protocompile v0.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/hack-pad/hackpadfs v0.2.1 // indirect
 	github.com/teamortix/golang-wasm/wasm v0.0.0-20230719150929-5d000994c833 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect

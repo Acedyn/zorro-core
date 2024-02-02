@@ -21,11 +21,12 @@ func FindPluginVersions(name string, pluginConfig *config_proto.PluginConfig) []
 	versions := []*Plugin{}
 
 	for _, pluginSearchPath := range pluginConfig.GetRepos() {
-		if _, err := os.Stat(pluginSearchPath); os.IsNotExist(err) {
-			continue
-		}
-
 		err := filepath.WalkDir(pluginSearchPath, func(path string, f os.DirEntry, _ error) error {
+			// Handle the case where the walk path does not exists
+			if f == nil {
+				return nil
+			}
+
 			pathStem := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
 			if pathStem == PLUGIN_DEFINITION_NAME {
 				plugin := GetPluginBare(path)
@@ -183,7 +184,7 @@ func resolvePluginVersion(
 }
 
 // Recusive function that will select a quandidates and resolve its dependencies.
-// It will try every possible combinason until a valid one is fund
+// It will try every possible combinason until a valid one is found
 func resolvePluginGraph(
 	quandidates map[string][]*Plugin,
 	completed map[string]bool,
@@ -221,7 +222,7 @@ func resolvePluginGraph(
 		})
 
 		if iterErr != nil {
-			utils.Logger().Warn(fmt.Sprintf("Skipping plugin versions: could not load plugin\n\t" + iterErr.Error()))
+			utils.Logger().Warn(fmt.Sprintf("Skipping plugin versions: could not load plugin" + iterErr.Error()))
 			continue
 		}
 
