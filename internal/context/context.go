@@ -11,6 +11,7 @@ import (
 	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	context_proto "github.com/Acedyn/zorro-proto/zorroprotos/context"
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
+	tools_proto "github.com/Acedyn/zorro-proto/zorroprotos/tools"
 	"github.com/google/uuid"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
@@ -57,20 +58,49 @@ func (context *Context) Environ(includeCurrent bool) []string {
 	})
 }
 
-// Flatten list of all the commands present in the selected plugins that can be executed by the given processor
-func (context *Context) AvailableCommandPaths(processor *processor.Processor) []string {
+// Flatten list of all the tools present in the selected plugins and return their resolved paths
+func (context *Context) AvailableToolsPaths(processor *processor.Processor) map[tools_proto.ToolType][]string {
 	processorSubsets := append(processor.GetSubsets(), processor.GetName())
-	availableCommands := []string{}
+	availableTools := map[tools_proto.ToolType][]string{
+		tools_proto.ToolType_ACTION:  {},
+		tools_proto.ToolType_COMMAND: {},
+		tools_proto.ToolType_HOOK:    {},
+		tools_proto.ToolType_WIDGET:  {},
+	}
 
 	for _, plugin := range context.GetPlugins() {
+		fileSystemPrefix := ""
+		switch fsConfig := plugin.GetRepository().FileSystemConfig.(type) {
+		case *config_proto.RepositoryConfig_Os:
+			fileSystemPrefix = fsConfig.Os.Directory
+		}
+
 		for _, commandDeclaration := range plugin.GetTools().GetCommands() {
 			if slices.Contains(processorSubsets, commandDeclaration.GetCategory()) {
-				availableCommands = append(availableCommands, commandDeclaration.GetPath())
+				commandPath := strings.ReplaceAll(filepath.Join(fileSystemPrefix, commandDeclaration.GetPath()), string(filepath.Separator), "/")
+				availableTools[tools_proto.ToolType_COMMAND] = append(availableTools[tools_proto.ToolType_COMMAND], commandPath)
 			}
+		}
+		for _, actionDeclaration := range plugin.GetTools().GetActions() {
+			actionPath := strings.ReplaceAll(filepath.Join(fileSystemPrefix, actionDeclaration.GetPath()), string(filepath.Separator), "/")
+			availableTools[tools_proto.ToolType_ACTION] = append(availableTools[tools_proto.ToolType_COMMAND], actionPath)
+		}
+		for _, widgetDeclaration := range plugin.GetTools().GetWidgets() {
+			widgetPath := strings.ReplaceAll(filepath.Join(fileSystemPrefix, widgetDeclaration.GetPath()), string(filepath.Separator), "/")
+			availableTools[tools_proto.ToolType_WIDGET] = append(availableTools[tools_proto.ToolType_COMMAND], widgetPath)
+		}
+		for _, hookDeclaration := range plugin.GetTools().GetHooks() {
+			hookPath := strings.ReplaceAll(filepath.Join(fileSystemPrefix, hookDeclaration.GetPath()), string(filepath.Separator), "/")
+			availableTools[tools_proto.ToolType_HOOK] = append(availableTools[tools_proto.ToolType_COMMAND], hookPath)
 		}
 	}
 
-	return availableCommands
+	return availableTools
+}
+
+// Flatten list of all the commands present in the selected plugins that can be executed by the given processor
+func (context *Context) AvailableCommandPaths(processor *processor.Processor) []string {
+	return context.AvailableToolsPaths(processor)[tools_proto.ToolType_COMMAND]
 }
 
 // Flatten list of all the commands present in the selected plugins that can be executed by the given processor
@@ -79,7 +109,7 @@ func (context *Context) AvailableActions() map[string]string {
 
 	for _, plugin := range context.GetPlugins() {
 		for _, actionDeclaration := range plugin.GetTools().GetActions() {
-			actionName := strings.Split(filepath.Base(actionDeclaration.GetPath()), ".")[0]
+			actionName := strings.Split(strings.ReplaceAll(strings.ReplaceAll(filepath.Base(actionDeclaration.GetPath()), string(filepath.Separator), "/"), string(filepath.Separator), "/"), ".")[0]
 			availableActions[actionName] = actionDeclaration.GetPath()
 		}
 	}

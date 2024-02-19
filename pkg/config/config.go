@@ -22,26 +22,11 @@ func GlobalConfig() *config_proto.Config {
 			},
 			PluginConfig: &config_proto.PluginConfig{
 				DefaultRequire: []string{},
-				Repos:          []string{},
+				Repositories:   []*config_proto.RepositoryConfig{},
 			},
 			NetworkConfig: &config_proto.NetworkConfig{
 				GRPCPort: 8686,
 				GRPCHost: "127.0.0.1",
-			},
-			FileSystemsConfig: &config_proto.FileSystemsConfig{
-				FileSystems: map[string]*config_proto.FileSystemConfig{
-					"os": {
-						Type: config_proto.FileSystemType_Os,
-					},
-					"indexeddb": {
-						Type: config_proto.FileSystemType_IndexedDb,
-						Config: &config_proto.FileSystemConfig_IndexedDb{
-							IndexedDb: &config_proto.IndexedDbFsConfig{
-								Name: "default",
-							},
-						},
-					},
-				},
 			},
 		}
 	})

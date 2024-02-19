@@ -22,12 +22,20 @@ func TestGetAllPluginVersion(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))), string(filepath.Separator), "/")
+	fullPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins"), string(filepath.Separator), "/")
 
 	for name, expectedPluginCount := range getAllPluginVersionsTests {
 		plugins := FindPluginVersions(name, &config_proto.PluginConfig{
-			Repos: []string{fullPath},
+			Repositories: []*config_proto.RepositoryConfig{
+				{
+					FileSystemConfig: &config_proto.RepositoryConfig_Os{
+						Os: &config_proto.OsFsConfig{
+							Directory: fullPath,
+						},
+					},
+				},
+			},
 		})
 
 		if expectedPluginCount != len(plugins) {
@@ -54,13 +62,21 @@ func TestPluginResolution(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))), string(filepath.Separator), "/")
+	fullPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins"), string(filepath.Separator), "/")
 
 	for pluginQuery, expectedVersions := range pluginResolutionTests {
 		query := strings.Split(pluginQuery, " ")
 		resolvedPlugins, err := ResolvePlugins(query, &config_proto.PluginConfig{
-			Repos: []string{fullPath},
+			Repositories: []*config_proto.RepositoryConfig{
+				{
+					FileSystemConfig: &config_proto.RepositoryConfig_Os{
+						Os: &config_proto.OsFsConfig{
+							Directory: fullPath,
+						},
+					},
+				},
+			},
 		})
 		if err != nil {
 			t.Errorf("could not resolve plugin graph: %s", err.Error())

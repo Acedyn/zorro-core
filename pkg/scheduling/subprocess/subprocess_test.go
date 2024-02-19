@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Acedyn/zorro-core/internal/network"
@@ -28,10 +29,10 @@ func mockedSocketValueDescriptor(name string) (protoreflect.MessageDescriptor, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get the current working directory: %w", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))))
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))), string(filepath.Separator), "/")
 	fileName := "log.proto"
-	rootPath := filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "zorro_python", "commands", "log")
-	importPath := filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "protos")
+	rootPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "zorro_python", "commands", "log"), string(filepath.Separator), "/")
+	importPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins", "python", "python@3.10", "protos"), string(filepath.Separator), "/")
 
 	compiler := protocompile.Compiler{
 		Resolver: &protocompile.SourceResolver{
@@ -94,11 +95,19 @@ func TestProcessorRegistration(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))))
-	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))), string(filepath.Separator), "/")
+	fullPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins"), string(filepath.Separator), "/")
 
 	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
-		Repos: []string{fullPath},
+		Repositories: []*config_proto.RepositoryConfig{
+			{
+				FileSystemConfig: &config_proto.RepositoryConfig_Os{
+					Os: &config_proto.OsFsConfig{
+						Directory: fullPath,
+					},
+				},
+			},
+		},
 	}})
 
 	if err != nil {
@@ -142,11 +151,19 @@ func TestCommandExecution(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))))
-	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))), string(filepath.Separator), "/")
+	fullPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins"), string(filepath.Separator), "/")
 
 	resolvedContext, err := zorro_context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
-		Repos: []string{fullPath},
+		Repositories: []*config_proto.RepositoryConfig{
+			{
+				FileSystemConfig: &config_proto.RepositoryConfig_Os{
+					Os: &config_proto.OsFsConfig{
+						Directory: fullPath,
+					},
+				},
+			},
+		},
 	}})
 
 	if err != nil {

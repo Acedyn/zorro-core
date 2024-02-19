@@ -53,21 +53,21 @@ var testContext = Context{
 func TestEnviron(t *testing.T) {
 	resolvedEnviron := testContext.Environ(false)
 	expectedEnviron := map[string]string{
-    "FOO": strings.Join([]string{
-			"/plugin-b/b",
-			"/plugin-b/a",
-			"/plugin-a/a",
-			"/plugin-a/b",
+		"FOO": strings.Join([]string{
+			strings.ReplaceAll(filepath.Join("/plugin-b/b"), string(filepath.Separator), "/"),
+			strings.ReplaceAll(filepath.Join("/plugin-b/a"), string(filepath.Separator), "/"),
+			strings.ReplaceAll(filepath.Join("/plugin-a/a"), string(filepath.Separator), "/"),
+			strings.ReplaceAll(filepath.Join("/plugin-a/b"), string(filepath.Separator), "/"),
 		}, string(filepath.ListSeparator)),
-    "BAR": strings.Join([]string{
-			"/plugin-a/b",
-			"/plugin-a/a",
+		"BAR": strings.Join([]string{
+			strings.ReplaceAll(filepath.Join("/plugin-a/b"), string(filepath.Separator), "/"),
+			strings.ReplaceAll(filepath.Join("/plugin-a/a"), string(filepath.Separator), "/"),
 		}, string(filepath.ListSeparator)),
-    "BAZ": "plugin-b",
+		"BAZ": "plugin-b",
 	}
 
 	for key, environ := range expectedEnviron {
-		if !slices.Contains(resolvedEnviron, key + "=" + environ) {
+		if !slices.Contains(resolvedEnviron, key+"="+environ) {
 			t.Errorf("No resolved environ matched the expected environ %q", environ)
 		}
 	}

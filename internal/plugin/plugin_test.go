@@ -3,8 +3,10 @@ package plugin
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 )
 
@@ -35,12 +37,12 @@ func TestPluginInit(t *testing.T) {
 		return
 	}
 
-	if pluginInitTest.Tools.Commands[0].GetPath() != filepath.Join("/foo/bar/commands") {
+	if pluginInitTest.Tools.Commands[0].GetPath() != strings.ReplaceAll(filepath.Join("/foo/bar/commands"), string(filepath.Separator), "/") {
 		t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[0])
 		return
 	}
 
-	if pluginInitTest.Tools.Commands[1].GetPath() != filepath.Join("/foo/bar/foo/commands") {
+	if pluginInitTest.Tools.Commands[1].GetPath() != strings.ReplaceAll(filepath.Join("/foo/bar/foo/commands"), string(filepath.Separator), "/") {
 		t.Errorf("invalid plugin command paths initialized: %s", pluginInitTest.Tools.Commands[1])
 		return
 	}
@@ -49,7 +51,7 @@ func TestPluginInit(t *testing.T) {
 // Test the loading of a bare plugin
 func TestLoadPluginBare(t *testing.T) {
 	pluginPath := "/foo/bar@1.2/zorro-plugin.json"
-	plugin := GetPluginBare(pluginPath)
+	plugin := GetPluginBare(pluginPath, nil)
 
 	if plugin.Name != "bar" {
 		t.Errorf("Invalid bare plugin's name loaded: %s", plugin.Name)
@@ -93,11 +95,18 @@ func TestLoadPluginFromFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get the current working directory\n\t%s", err)
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))), string(filepath.Separator), "/")
 
 	for path, expectedPlugin := range loadPluginFromFileTests {
-		fullPath := filepath.Join(cwdPath, "testdata", "plugins", path)
-		loadedPlugin, err := GetPluginFromFile(fullPath)
+		fullPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins"), string(filepath.Separator), "/")
+		loadedPlugin, err := GetPluginFromFile(path, &config_proto.RepositoryConfig{
+			FileSystemConfig: &config_proto.RepositoryConfig_Os{
+				Os: &config_proto.OsFsConfig{
+					Directory: fullPath,
+				},
+			},
+		})
+
 		if err != nil {
 			t.Errorf("An error occured while loading the plugin at path %s\n\t%s", path, err)
 			return
@@ -112,14 +121,14 @@ func TestLoadPluginFromFile(t *testing.T) {
 			return
 		}
 		for index := range loadedPlugin.GetTools().Commands {
-			expectedCommand := filepath.Join(filepath.Dir(fullPath), expectedPlugin.ExpectedCommands[index])
+			expectedCommand := strings.ReplaceAll(filepath.Join(filepath.Dir(path), expectedPlugin.ExpectedCommands[index]), string(filepath.Separator), "/")
 			if loadedPlugin.GetTools().Commands[index].GetPath() != expectedCommand {
 				t.Errorf("Incorrect command loaded on the plugin at path %s (%s)", path, loadedPlugin.GetTools().Commands[index])
 				return
 			}
 		}
 		for index := range loadedPlugin.GetTools().Actions {
-			expectedAction := filepath.Join(filepath.Dir(fullPath), expectedPlugin.ExpectedActions[index])
+			expectedAction := strings.ReplaceAll(filepath.Join(filepath.Dir(path), expectedPlugin.ExpectedActions[index]), string(filepath.Separator), "/")
 			if loadedPlugin.GetTools().Actions[index].GetPath() != expectedAction {
 				t.Errorf("Incorrect action loaded on the plugin at path %s (%s)", path, loadedPlugin.GetTools().Actions[index])
 				return

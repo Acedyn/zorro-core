@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,25 +21,28 @@ func FindPluginVersions(name string, pluginConfig *config_proto.PluginConfig) []
 	}
 	versions := []*Plugin{}
 
-	for _, pluginSearchPath := range pluginConfig.GetRepos() {
-		err := filepath.WalkDir(pluginSearchPath, func(path string, f os.DirEntry, _ error) error {
-			// Handle the case where the walk path does not exists
-			if f == nil {
-				return nil
-			}
-
-			pathStem := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
-			if pathStem == PLUGIN_DEFINITION_NAME {
-				plugin := GetPluginBare(path)
-				if plugin.GetName() == name {
-					versions = append(versions, GetPluginBare(path))
+	for _, repository := range pluginConfig.GetRepositories() {
+		fileSystem, err := GetFileSystem(repository)
+		if err == nil {
+			err = fs.WalkDir(fileSystem, ".", func(path string, f os.DirEntry, _ error) error {
+				// Handle the case where the walk path does not exists
+				if f == nil {
+					return nil
 				}
-				return filepath.SkipDir
-			}
-			return nil
-		})
+
+				pathStem := strings.TrimSuffix(f.Name(), strings.ReplaceAll(filepath.Ext(f.Name()), string(filepath.Separator), "/"))
+				if pathStem == PLUGIN_DEFINITION_NAME {
+					plugin := GetPluginBare(path, repository)
+					if plugin.GetName() == name {
+						versions = append(versions, GetPluginBare(path, repository))
+					}
+					return filepath.SkipDir
+				}
+				return nil
+			})
+		}
 		if err != nil {
-			utils.Logger().Warn("An error occured while looking for plugins in path %s:\n\t%s", pluginSearchPath, err)
+			utils.Logger().Warn("An error occured while looking for plugins in file system %s:\n\t%s", fileSystem, err)
 		}
 	}
 
@@ -169,7 +173,7 @@ func resolvePluginVersion(
 
 	// Reload the plugin to make sure it's not bare
 	preferedVersion := GetPreferedPluginVersion(versions)
-	plugin, error := GetPluginFromFile(preferedVersion.GetPath())
+	plugin, error := GetPluginFromFile(preferedVersion.GetPath(), preferedVersion.GetRepository())
 	if error != nil {
 		return preferedVersion, nil, fmt.Errorf("could not load plugin %s: %w", name, error)
 	}
@@ -222,7 +226,7 @@ func resolvePluginGraph(
 		})
 
 		if iterErr != nil {
-			utils.Logger().Warn(fmt.Sprintf("Skipping plugin versions: could not load plugin" + iterErr.Error()))
+			utils.Logger().Warn(fmt.Sprintf("Skipping plugin versions: could not load plugin: " + iterErr.Error()))
 			continue
 		}
 

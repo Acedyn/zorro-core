@@ -242,7 +242,7 @@ func (action *Action) Unmarshall(raw []byte) error {
 
 // Initialize the action from json file
 func LoadAction(path string) (*Action, error) {
-	actionName := strings.Split(filepath.Base(path), ".")[0]
+	actionName := strings.Split(strings.ReplaceAll(filepath.Base(path), string(filepath.Separator), "/"), ".")[0]
 	action := Action{&tools_proto.Action{Base: &tools_proto.ToolBase{
 		Name: &actionName,
 	}}}

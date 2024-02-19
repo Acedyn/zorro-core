@@ -308,8 +308,8 @@ func TestActionUnmarshall(t *testing.T) {
 		t.Errorf("Could not get the current working directory: %v", err)
 		return
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	actionPath := filepath.Join(cwdPath, "testdata", "actions", "foo.json")
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))), string(filepath.Separator), "/")
+	actionPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "actions", "foo.json"), string(filepath.Separator), "/")
 
 	action, err := tools.LoadAction(actionPath)
 	if err != nil {
@@ -357,13 +357,25 @@ func TestActionExecution(t *testing.T) {
 		t.Errorf("Could not get the current working directory: %v", err)
 		return
 	}
-	cwdPath = filepath.Dir(filepath.Dir(filepath.Join(cwdPath)))
-	actionPath := filepath.Join(cwdPath, "testdata", "actions", "bar.json")
+	cwdPath = strings.ReplaceAll(filepath.Dir(filepath.Dir(filepath.Join(cwdPath))), string(filepath.Separator), "/")
+	actionPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "actions", "bar.json"), string(filepath.Separator), "/")
 
-	fullPath := filepath.Join(cwdPath, "testdata", "plugins")
+	fullPath := strings.ReplaceAll(filepath.Join(cwdPath, "testdata", "plugins"), string(filepath.Separator), "/")
 	resolvedContext, err := context.NewContext([]string{"python"}, &config_proto.Config{PluginConfig: &config_proto.PluginConfig{
-		Repos: []string{fullPath},
+		Repositories: []*config_proto.RepositoryConfig{
+			{
+				FileSystemConfig: &config_proto.RepositoryConfig_Os{
+					Os: &config_proto.OsFsConfig{
+						Directory: fullPath,
+					},
+				},
+			},
+		},
 	}})
+	if err != nil {
+		t.Errorf("An error occured when resolving the context: %v", err)
+		return
+	}
 
 	action, err := tools.LoadAction(actionPath)
 	if err != nil {

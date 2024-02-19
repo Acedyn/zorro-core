@@ -9,6 +9,7 @@ import (
 	"github.com/Acedyn/zorro-core/internal/network"
 	"github.com/Acedyn/zorro-core/internal/plugin"
 
+	config_proto "github.com/Acedyn/zorro-proto/zorroprotos/config"
 	plugin_proto "github.com/Acedyn/zorro-proto/zorroprotos/plugin"
 	"github.com/life4/genesis/maps"
 	"github.com/life4/genesis/slices"
@@ -32,9 +33,18 @@ func buildPluginsEnvironment(baseEnvironment map[string]string, plugins []*plugi
 	environment := baseEnvironment
 
 	for _, pluginItem := range plugins {
+
+		fileSystemPrefix := ""
+		switch fsConfig := pluginItem.GetRepository().FileSystemConfig.(type) {
+		case *config_proto.RepositoryConfig_Os:
+			fileSystemPrefix = fsConfig.Os.Directory
+		}
+
 		for key, pluginEnviron := range pluginItem.GetEnv() {
 			// Prepend means insert at the beginning of the current value
 			for _, valuePrepend := range pluginEnviron.GetPrepend() {
+				valuePrepend = strings.ReplaceAll(filepath.Join(fileSystemPrefix, valuePrepend), string(filepath.Separator), "/")
+
 				if current, ok := environment[key]; ok {
 					current = strings.Trim(current, string(filepath.ListSeparator))
 					environment[key] = strings.Join([]string{valuePrepend, current}, string(filepath.ListSeparator))
@@ -44,6 +54,8 @@ func buildPluginsEnvironment(baseEnvironment map[string]string, plugins []*plugi
 			}
 			// Append means add at the end of the current value
 			for _, valueAppend := range pluginEnviron.GetAppend() {
+				valueAppend = strings.ReplaceAll(filepath.Join(fileSystemPrefix, valueAppend), string(filepath.Separator), "/")
+
 				if current, ok := environment[key]; ok {
 					current = strings.Trim(current, string(filepath.ListSeparator))
 					environment[key] = strings.Join([]string{current, valueAppend}, string(filepath.ListSeparator))
@@ -106,7 +118,7 @@ func buildToolsEnvironment(baseEnvironment map[string]string, plugins []*plugin.
 	maps.IMerge(environment, concatToolsDeclarations(
 		"ZORRO_COMMANDS",
 		slices.Reduce(plugins, []*plugin_proto.ToolsDeclaration{}, func(plugin *plugin.Plugin, acc []*plugin_proto.ToolsDeclaration) []*plugin_proto.ToolsDeclaration {
-			return append(acc, plugin.Tools.GetWidgets()...)
+			return append(acc, plugin.Tools.GetCommands()...)
 		}),
 	))
 
