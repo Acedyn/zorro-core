@@ -1,0 +1,14 @@
+{
+  "user_preferences": {
+    "language": 2
+  },
+  "plugin_config": {
+    "default_require": [],
+    "repositories": [],
+    "search_maximum_depht": 3
+  },
+  "network_config": {
+		"GRPC_port": 8686,
+		"GRPC_host": "127.0.0.1"
+  }
+}
