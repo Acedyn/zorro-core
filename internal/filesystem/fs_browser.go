@@ -14,7 +14,7 @@ import (
 func init() {
 	AvailableFileSystems()[filesystem_proto.FileSystemType_IndexedDb] = func(config any) (fs.FS, error) {
 		switch indexeddbConfig := config.(type) {
-		case *filesystem_proto.RepositoryConfig_IndexedDb:
+		case *filesystem_proto.FileSystemSettings_IndexedDb:
 			return indexeddb.NewFS(context.Background(), indexeddbConfig.IndexedDb.Name, indexeddb.Options{})
 		}
 
