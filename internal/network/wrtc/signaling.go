@@ -12,9 +12,9 @@ import (
 // since it is not part of the WRTC specification.
 type signaler interface {
 	// Called by the offerer for the answerer
-	SendOfferAndReceiveAnswer() error
+	SendOfferAndReceiveAnswer(peerConnection *webrtc.PeerConnection) error
 	// Called by the answerer in response to the offer
-	ReceiveOfferAndSendAnswer() error
+	ReceiveOfferAndSendAnswer(peerConnection *webrtc.PeerConnection) error
 }
 
 // Encodes the sdp in json then in base64

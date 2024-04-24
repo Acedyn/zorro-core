@@ -13,40 +13,38 @@ import (
 // Simple signaling method using stdin and stdout, the user will have to
 // use copy paste to exchange the offer and answers
 type stdIOSignaler struct {
-	ctx            context.Context
-	peerConnection *webrtc.PeerConnection
-	reader         io.Reader
-	writer         io.Writer
+	ctx    context.Context
+	reader io.Reader
+	writer io.Writer
 }
 
 // Option pattern for optional parameters in the stdIOSignaler builder
 type stdIOSignalerOption func(*stdIOSignaler)
 
-func WithContext(ctx context.Context) stdIOSignalerOption {
+func WithContextStdIOOption(ctx context.Context) stdIOSignalerOption {
 	return func(stdIOSignaler *stdIOSignaler) {
 		stdIOSignaler.ctx = ctx
 	}
 }
 
-func WithReader(reader io.Reader) stdIOSignalerOption {
+func WithReaderStdIOOption(reader io.Reader) stdIOSignalerOption {
 	return func(stdIOSignaler *stdIOSignaler) {
 		stdIOSignaler.reader = reader
 	}
 }
 
-func WithWriter(writer io.Writer) stdIOSignalerOption {
+func WithWriterStdIOOption(writer io.Writer) stdIOSignalerOption {
 	return func(stdIOSignaler *stdIOSignaler) {
 		stdIOSignaler.writer = writer
 	}
 }
 
 // Public function to create a new stdIOSignaler
-func NewStdIoSignaling(peerConnection *webrtc.PeerConnection, options ...stdIOSignalerOption) *stdIOSignaler {
+func NewStdIoSignaler(options ...stdIOSignalerOption) *stdIOSignaler {
 	stdIOSignaler := &stdIOSignaler{
-		peerConnection: peerConnection,
-		ctx:            context.Background(),
-		reader:         os.Stdin,
-		writer:         os.Stdout,
+		ctx:    context.Background(),
+		reader: os.Stdin,
+		writer: os.Stdout,
 	}
 
 	for _, option := range options {
@@ -57,7 +55,7 @@ func NewStdIoSignaling(peerConnection *webrtc.PeerConnection, options ...stdIOSi
 }
 
 // Read the std in and expect a base64 encoded SDP offer or answer
-func (stdIOSignaler *stdIOSignaler) setRemoteSDPFromStdin(printMessage string) error {
+func (stdIOSignaler *stdIOSignaler) setRemoteSDPFromStdin(peerConnection *webrtc.PeerConnection, printMessage string) error {
 	// We read for the stdin in a separated coroutine so we can wait for
 	// cancelation at the same time
 	stdinChan := make(chan struct {
@@ -87,7 +85,7 @@ func (stdIOSignaler *stdIOSignaler) setRemoteSDPFromStdin(printMessage string) e
 			return fmt.Errorf("an error occured while decoding stdin: %w", err)
 		}
 
-		err = stdIOSignaler.peerConnection.SetRemoteDescription(*decodedSdp)
+		err = peerConnection.SetRemoteDescription(*decodedSdp)
 		if err != nil {
 			return fmt.Errorf("could not set remote description %v: %w", decodedSdp, err)
 		}
@@ -98,14 +96,14 @@ func (stdIOSignaler *stdIOSignaler) setRemoteSDPFromStdin(printMessage string) e
 	return nil
 }
 
-func (stdIOSignaler *stdIOSignaler) SendOfferAndReceiveAnswer() error {
-	offer, err := stdIOSignaler.peerConnection.CreateOffer(nil)
+func (stdIOSignaler *stdIOSignaler) SendOfferAndReceiveAnswer(peerConnection *webrtc.PeerConnection) error {
+	offer, err := peerConnection.CreateOffer(nil)
 	if err != nil {
 		return fmt.Errorf("could not create offer for stdout signaling: %w", err)
 	}
 
 	// The offer is always a local description
-	stdIOSignaler.peerConnection.SetLocalDescription(offer)
+	peerConnection.SetLocalDescription(offer)
 
 	encodedSdp, err := encodeSdp(offer)
 	if err != nil {
@@ -115,7 +113,7 @@ func (stdIOSignaler *stdIOSignaler) SendOfferAndReceiveAnswer() error {
 	// The exchange of sdp is done using stdout by simply printing it
 	stdIOSignaler.writer.Write([]byte(fmt.Sprintf("SDP OFFER:\n%s\n", encodedSdp)))
 
-	err = stdIOSignaler.setRemoteSDPFromStdin("SDP ANSWER")
+	err = stdIOSignaler.setRemoteSDPFromStdin(peerConnection, "SDP ANSWER")
 	if err != nil {
 		return fmt.Errorf("an error occured when reading answer from stdin: %w", err)
 	}
@@ -123,19 +121,19 @@ func (stdIOSignaler *stdIOSignaler) SendOfferAndReceiveAnswer() error {
 	return nil
 }
 
-func (stdIOSignaler *stdIOSignaler) ReceiveOfferAndSendAnswer() error {
-	err := stdIOSignaler.setRemoteSDPFromStdin("SDP OFFER")
+func (stdIOSignaler *stdIOSignaler) ReceiveOfferAndSendAnswer(peerConnection *webrtc.PeerConnection) error {
+	err := stdIOSignaler.setRemoteSDPFromStdin(peerConnection, "SDP OFFER")
 	if err != nil {
 		return fmt.Errorf("an error occured when reading offer from stdin: %w", err)
 	}
 
-	answer, err := stdIOSignaler.peerConnection.CreateAnswer(nil)
+	answer, err := peerConnection.CreateAnswer(nil)
 	if err != nil {
 		return fmt.Errorf("could not create answer for stdout signaling: %w", err)
 	}
 
 	// The offer is always a local description
-	stdIOSignaler.peerConnection.SetLocalDescription(answer)
+	peerConnection.SetLocalDescription(answer)
 
 	encodedSdp, err := encodeSdp(answer)
 	if err != nil {

@@ -12,17 +12,9 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
-var webrtcConfig = webrtc.Configuration{
-	ICEServers: []webrtc.ICEServer{
-		{
-			URLs: []string{"stun:stun.l.google.com:19302"},
-		},
-	},
-}
-
 // Test the stdout signaling from the offerer point of view
 func TestStdioOffererSignaling(t *testing.T) {
-	offererPeerConnection, err := webrtc.NewPeerConnection(webrtcConfig)
+	offererPeerConnection, err := webrtc.NewPeerConnection(DefaultWRTCOptions.connectionConfig)
 	if err != nil {
 		t.Errorf("An error occured while creating peer connection: %s", err)
 	}
@@ -31,7 +23,7 @@ func TestStdioOffererSignaling(t *testing.T) {
 		t.Errorf("An error occured while creating datachannel: %s", err)
 	}
 
-	answererPeerConnection, err := webrtc.NewPeerConnection(webrtcConfig)
+	answererPeerConnection, err := webrtc.NewPeerConnection(DefaultWRTCOptions.connectionConfig)
 	if err != nil {
 		t.Errorf("An error occured while creating peer connection: %s", err)
 	}
@@ -42,18 +34,17 @@ func TestStdioOffererSignaling(t *testing.T) {
 
 	// Create the stdio signaling
 	pipeReader, pipeWriter := io.Pipe()
-	stdIOSignaler := NewStdIoSignaling(
-		offererPeerConnection,
-		WithContext(ctx),
-		WithReader(pipeReader),
-		WithWriter(pipeWriter),
+	stdIOSignaler := NewStdIoSignaler(
+		WithContextStdIOOption(ctx),
+		WithReaderStdIOOption(pipeReader),
+		WithWriterStdIOOption(pipeWriter),
 	)
 
 	// Start the signaling process in a separate goroutine so we can
 	// communicate with it via the reader and writer
 	signalingChan := make(chan error)
 	go func() {
-		signalingChan <- stdIOSignaler.SendOfferAndReceiveAnswer()
+		signalingChan <- stdIOSignaler.SendOfferAndReceiveAnswer(offererPeerConnection)
 	}()
 
 	// Communicate with the signaling process via the reader and the
@@ -151,12 +142,12 @@ func TestStdioOffererSignaling(t *testing.T) {
 // Test the stdout signaling from the answerer point of view
 func TestStdioAnswererSignaling(t *testing.T) {
 	// Create the webrtc connection
-	answererPeerConnection, err := webrtc.NewPeerConnection(webrtcConfig)
+	answererPeerConnection, err := webrtc.NewPeerConnection(DefaultWRTCOptions.connectionConfig)
 	if err != nil {
 		t.Errorf("An error occured while creating peer connection: %s", err)
 	}
 
-	offererPeerConnection, err := webrtc.NewPeerConnection(webrtcConfig)
+	offererPeerConnection, err := webrtc.NewPeerConnection(DefaultWRTCOptions.connectionConfig)
 	if err != nil {
 		t.Errorf("An error occured while creating peer connection: %s", err)
 	}
@@ -171,18 +162,17 @@ func TestStdioAnswererSignaling(t *testing.T) {
 
 	// Create the stdio signaling
 	pipeReader, pipeWriter := io.Pipe()
-	stdIOSignaler := NewStdIoSignaling(
-		answererPeerConnection,
-		WithContext(ctx),
-		WithReader(pipeReader),
-		WithWriter(pipeWriter),
+	stdIOSignaler := NewStdIoSignaler(
+		WithContextStdIOOption(ctx),
+		WithReaderStdIOOption(pipeReader),
+		WithWriterStdIOOption(pipeWriter),
 	)
 
 	// Start the signaling process in a separate goroutine so we can
 	// communicate with it via the reader and writer
 	signalingChan := make(chan error)
 	go func() {
-		signalingChan <- stdIOSignaler.ReceiveOfferAndSendAnswer()
+		signalingChan <- stdIOSignaler.ReceiveOfferAndSendAnswer(answererPeerConnection)
 	}()
 
 	// Communicate with the signaling process via the reader and the
