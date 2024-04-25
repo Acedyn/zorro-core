@@ -260,9 +260,5 @@ func TestStdioAnswererSignaling(t *testing.T) {
 				return
 			}
 		}
-
-		if signalingChan == nil && testChan == nil {
-			break
-		}
 	}
 }

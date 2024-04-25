@@ -15,15 +15,9 @@ type WRTCOptions struct {
 }
 
 var DefaultWRTCOptions = WRTCOptions{
-	ctx:      context.Background(),
-	signaler: NewStdIoSignaler(),
-	connectionConfig: webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
-			{
-				URLs: []string{"stun:stun.l.google.com:19302"},
-			},
-		},
-	},
+	ctx:              context.Background(),
+	signaler:         NewStdIoSignaler(),
+	connectionConfig: webrtc.Configuration{},
 }
 
 type WRTCOption func(*WRTCOptions)
@@ -46,9 +40,9 @@ func WithContextWRTCOption(ctx context.Context) WRTCOption {
 	}
 }
 
-func OnMessageWRTCOption(ctx context.Context) WRTCOption {
+func OnMessageWRTCOption(onMessage func(msg webrtc.DataChannelMessage)) WRTCOption {
 	return func(options *WRTCOptions) {
-		options.ctx = ctx
+		options.OnMessage = onMessage
 	}
 }
 
@@ -56,7 +50,7 @@ type WRTCConnection struct {
 	connection  *webrtc.PeerConnection
 	datachannel *webrtc.DataChannel
 	options     WRTCOptions
-	ready       chan struct{}
+	ready       chan error
 }
 
 func newConnection(options ...WRTCOption) (*WRTCConnection, error) {
@@ -71,7 +65,7 @@ func newConnection(options ...WRTCOption) (*WRTCConnection, error) {
 	}
 
 	wrtcConnection := WRTCConnection{
-		ready:      make(chan struct{}),
+		ready:      make(chan error),
 		options:    wrtcOptions,
 		connection: peerConnection,
 	}
@@ -82,21 +76,39 @@ func newConnection(options ...WRTCOption) (*WRTCConnection, error) {
 // and wait for a response from the answerer
 func NewConnectionAsOfferer(options ...WRTCOption) (*WRTCConnection, error) {
 	wrtcConnection, err := newConnection(options...)
-
-	datachannel, err := wrtcConnection.connection.CreateDataChannel("main", nil)
 	if err != nil {
-		return nil, fmt.Errorf("an error occured while creating datachannel: %w", err)
-	}
-	wrtcConnection.datachannel = datachannel
-	datachannel.OnOpen(func() { wrtcConnection.ready <- struct{}{} })
-	datachannel.OnMessage(wrtcConnection.options.OnMessage)
-
-	err = wrtcConnection.options.signaler.SendOfferAndReceiveAnswer(wrtcConnection.connection)
-	if err != nil {
-		return nil, fmt.Errorf("an error occured during signaling phase: %w", err)
+		return nil, fmt.Errorf("an error occured when initializing connection: %w", err)
 	}
 
-	<-wrtcConnection.ready
+	// Initialize the connection in a separate goroutine so we can cancel it
+	go func() {
+		datachannel, err := wrtcConnection.connection.CreateDataChannel("main", nil)
+		if err != nil {
+			wrtcConnection.ready <- fmt.Errorf("an error occured while creating datachannel: %w", err)
+			return
+		}
+		wrtcConnection.datachannel = datachannel
+		datachannel.OnOpen(func() {
+			wrtcConnection.ready <- nil
+		})
+		datachannel.OnMessage(wrtcConnection.options.OnMessage)
+
+		err = wrtcConnection.options.signaler.SendOfferAndReceiveAnswer(wrtcConnection.connection)
+		if err != nil {
+			wrtcConnection.ready <- fmt.Errorf("an error occured during signaling phase: %w", err)
+			return
+		}
+	}()
+
+	select {
+	case err := <-wrtcConnection.ready:
+		if err != nil {
+			return nil, err
+		}
+	case <-wrtcConnection.options.ctx.Done():
+		return nil, fmt.Errorf("connection as offerer canceled")
+	}
+
 	return wrtcConnection, nil
 }
 
@@ -104,17 +116,33 @@ func NewConnectionAsOfferer(options ...WRTCOption) (*WRTCConnection, error) {
 // and wait for an offer from the offerer
 func NewConnectionAsAnswerer(options ...WRTCOption) (*WRTCConnection, error) {
 	wrtcConnection, err := newConnection(options...)
-	wrtcConnection.connection.OnDataChannel(func(datachannel *webrtc.DataChannel) {
-		wrtcConnection.datachannel = datachannel
-		datachannel.OnOpen(func() { wrtcConnection.ready <- struct{}{} })
-		datachannel.OnMessage(wrtcConnection.options.OnMessage)
-	})
-
-	err = wrtcConnection.options.signaler.ReceiveOfferAndSendAnswer(wrtcConnection.connection)
 	if err != nil {
-		return nil, fmt.Errorf("an error occured during signaling phase: %w", err)
+		return nil, fmt.Errorf("an error occured when initializing connection: %w", err)
 	}
 
-	<-wrtcConnection.ready
+	// Initialize the connection in a separate goroutine so we can cancel it
+	go func() {
+		wrtcConnection.connection.OnDataChannel(func(datachannel *webrtc.DataChannel) {
+			wrtcConnection.datachannel = datachannel
+			datachannel.OnOpen(func() { wrtcConnection.ready <- nil })
+			datachannel.OnMessage(wrtcConnection.options.OnMessage)
+		})
+
+		err = wrtcConnection.options.signaler.ReceiveOfferAndSendAnswer(wrtcConnection.connection)
+		if err != nil {
+			wrtcConnection.ready <- fmt.Errorf("an error occured during signaling phase: %w", err)
+			return
+		}
+	}()
+
+	select {
+	case err := <-wrtcConnection.ready:
+		if err != nil {
+			return nil, err
+		}
+	case <-wrtcConnection.options.ctx.Done():
+		return nil, fmt.Errorf("connection as answerer canceled")
+	}
+
 	return wrtcConnection, nil
 }
