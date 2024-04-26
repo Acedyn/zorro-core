@@ -111,7 +111,7 @@ func (wrtcConnection *WRTCConnection) CreateDatachannel(ctx context.Context, lab
 		return nil, fmt.Errorf("label %s is reserved for the connection's main datachannel", label)
 	}
 
-	datachannel, err := wrtcConnection.connection.CreateDataChannel(mainDatachannelName, nil)
+	datachannel, err := wrtcConnection.connection.CreateDataChannel(label, nil)
 	if err != nil {
 		return nil, fmt.Errorf("an error occured while creating datachannel: %w", err)
 	}

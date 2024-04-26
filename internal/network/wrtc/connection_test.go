@@ -189,11 +189,11 @@ func TestDatachannelCreation(t *testing.T) {
 
 		// Wait for a response
 		receivedMessage := <-messageChan
-		if receivedMessage != offererMessage {
+		if receivedMessage != answererMessage {
 			offererChan <- fmt.Errorf(
 				"wrong message received, received %s, expected: %s",
 				receivedMessage,
-				offererMessage,
+				answererMessage,
 			)
 			return
 		}
