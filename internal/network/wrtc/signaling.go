@@ -44,14 +44,14 @@ func decodeSdp(sdp string) (*webrtc.SessionDescription, error) {
 }
 
 // Generic signaler with hook on every parts where sdp exchange is required
-type genericSignaler struct {
-	onSendOffer     func(sdp string) error
-	onReceiveOffer  func() (string, error)
-	onSendAnswer    func(sdp string) error
-	onReceiveAnswer func() (string, error)
+type GenericSignaler struct {
+	OnSendOffer     func(sdp string) error
+	OnReceiveOffer  func() (string, error)
+	OnSendAnswer    func(sdp string) error
+	OnReceiveAnswer func() (string, error)
 }
 
-func (genericSignaler *genericSignaler) SendOfferAndReceiveAnswer(peerConnection *webrtc.PeerConnection) error {
+func (genericSignaler *GenericSignaler) SendOfferAndReceiveAnswer(peerConnection *webrtc.PeerConnection) error {
 	// Create the offer to be sent to the answerer
 	offer, err := peerConnection.CreateOffer(nil)
 	if err != nil {
@@ -75,13 +75,13 @@ func (genericSignaler *genericSignaler) SendOfferAndReceiveAnswer(peerConnection
 	}
 
 	// Send to offer to the answerer
-	err = genericSignaler.onSendOffer(encodedOffer)
+	err = genericSignaler.OnSendOffer(encodedOffer)
 	if err != nil {
 		return err
 	}
 
 	// Wait for the answerer's response
-	encodedAnswer, err := genericSignaler.onReceiveAnswer()
+	encodedAnswer, err := genericSignaler.OnReceiveAnswer()
 	if err != nil {
 		return err
 	}
@@ -100,9 +100,9 @@ func (genericSignaler *genericSignaler) SendOfferAndReceiveAnswer(peerConnection
 	return nil
 }
 
-func (genericSignaler *genericSignaler) ReceiveOfferAndSendAnswer(peerConnection *webrtc.PeerConnection) error {
+func (genericSignaler *GenericSignaler) ReceiveOfferAndSendAnswer(peerConnection *webrtc.PeerConnection) error {
 	// Wait for the offerer's offer
-	encodedOffer, err := genericSignaler.onReceiveOffer()
+	encodedOffer, err := genericSignaler.OnReceiveOffer()
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (genericSignaler *genericSignaler) ReceiveOfferAndSendAnswer(peerConnection
 	}
 
 	// Send the answer to the offerer
-	err = genericSignaler.onSendAnswer(encodedAnswer)
+	err = genericSignaler.OnSendAnswer(encodedAnswer)
 	if err != nil {
 		return err
 	}

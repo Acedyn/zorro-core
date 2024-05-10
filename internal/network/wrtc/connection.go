@@ -16,8 +16,8 @@ type WRTCOptions struct {
 }
 
 type DatachannelOptions struct {
-	onMessage func(msg webrtc.DataChannelMessage)
-	onOpen    func()
+	OnMessage func(msg webrtc.DataChannelMessage)
+	OnOpen    func()
 }
 
 var DefaultWRTCOptions = WRTCOptions{
@@ -28,24 +28,28 @@ var DefaultWRTCOptions = WRTCOptions{
 
 type WRTCOption func(*WRTCOptions)
 
+// Allows passing custum webrtc config like ICE servers
 func WithWebrtcConfigWRTCOption(connectionConfig webrtc.Configuration) WRTCOption {
 	return func(options *WRTCOptions) {
 		options.connectionConfig = connectionConfig
 	}
 }
 
+// Pass a signaler that will handle the sdp exchange
 func WithSignalerWRTCOption(signaler signaler) WRTCOption {
 	return func(options *WRTCOptions) {
 		options.signaler = signaler
 	}
 }
 
+// Pass a context to allow canceling
 func WithContextWRTCOption(ctx context.Context) WRTCOption {
 	return func(options *WRTCOptions) {
 		options.ctx = ctx
 	}
 }
 
+// Hook and options for the default datachannel of the connection
 func WithMainChannelWRTCOption(mainChannelOptions DatachannelOptions) WRTCOption {
 	return func(options *WRTCOptions) {
 		options.mainChannel = mainChannelOptions
@@ -105,7 +109,7 @@ func (wrtcConnection *WRTCConnection) HandleNewDatachannel(datachannel *webrtc.D
 	}
 }
 
-// Create a datachannel, renegociate the connection and wait for the other peer to pick up
+// Create a datachannel and wait for the other peer to pick up
 func (wrtcConnection *WRTCConnection) CreateDatachannel(ctx context.Context, label string, options DatachannelOptions) (*webrtc.DataChannel, error) {
 	if label == mainDatachannelName {
 		return nil, fmt.Errorf("label %s is reserved for the connection's main datachannel", label)
@@ -120,14 +124,14 @@ func (wrtcConnection *WRTCConnection) CreateDatachannel(ctx context.Context, lab
 	datachannelReady := make(chan error)
 	datachannel.OnOpen(func() {
 		datachannelReady <- nil
-		if options.onOpen != nil {
-			options.onOpen()
+		if options.OnOpen != nil {
+			options.OnOpen()
 		}
 	})
 
 	// Optional custom handler on message
-	if options.onMessage != nil {
-		datachannel.OnMessage(options.onMessage)
+	if options.OnMessage != nil {
+		datachannel.OnMessage(options.OnMessage)
 	}
 
 	select {
@@ -138,7 +142,7 @@ func (wrtcConnection *WRTCConnection) CreateDatachannel(ctx context.Context, lab
 	}
 }
 
-// Wait for the peer to create a datachannel, renegociate the connection and pick it up
+// Wait for the peer to create a datachannel and pick it up
 func (wrtcConnection *WRTCConnection) ReceiveDatachannel(ctx context.Context, label string, options DatachannelOptions) (*webrtc.DataChannel, error) {
 	if label == mainDatachannelName {
 		return nil, fmt.Errorf("label %s is reserved for the connection's main datachannel", label)
@@ -164,12 +168,12 @@ func (wrtcConnection *WRTCConnection) ReceiveDatachannel(ctx context.Context, la
 	select {
 	case datachannel := <-datachannelChan:
 		// Optional custom handler on open
-		if options.onOpen != nil {
-			datachannel.OnOpen(options.onOpen)
+		if options.OnOpen != nil {
+			datachannel.OnOpen(options.OnOpen)
 		}
 		// Optional custom handler on message
-		if options.onMessage != nil {
-			datachannel.OnMessage(options.onMessage)
+		if options.OnMessage != nil {
+			datachannel.OnMessage(options.OnMessage)
 		}
 		return datachannel, nil
 	case <-ctx.Done():
@@ -200,14 +204,14 @@ func NewConnectionAsOfferer(options ...WRTCOption) (*WRTCConnection, error) {
 		// OnOpen triggers when the datachannel connection is established
 		datachannel.OnOpen(func() {
 			wrtcConnection.ready <- nil
-			if wrtcConnection.options.mainChannel.onOpen != nil {
-				wrtcConnection.options.mainChannel.onOpen()
+			if wrtcConnection.options.mainChannel.OnOpen != nil {
+				wrtcConnection.options.mainChannel.OnOpen()
 			}
 		})
 
 		// Optional custom handler on message
-		if wrtcConnection.options.mainChannel.onMessage != nil {
-			datachannel.OnMessage(wrtcConnection.options.mainChannel.onMessage)
+		if wrtcConnection.options.mainChannel.OnMessage != nil {
+			datachannel.OnMessage(wrtcConnection.options.mainChannel.OnMessage)
 		}
 
 		err = wrtcConnection.options.signaler.SendOfferAndReceiveAnswer(wrtcConnection.connection)
@@ -247,14 +251,14 @@ func NewConnectionAsAnswerer(options ...WRTCOption) (*WRTCConnection, error) {
 			// OnOpen triggers when the datachannel connection is established
 			datachannel.OnOpen(func() {
 				wrtcConnection.ready <- nil
-				if wrtcConnection.options.mainChannel.onOpen != nil {
-					wrtcConnection.options.mainChannel.onOpen()
+				if wrtcConnection.options.mainChannel.OnOpen != nil {
+					wrtcConnection.options.mainChannel.OnOpen()
 				}
 			})
 
 			// Optional custom handler on message
-			if wrtcConnection.options.mainChannel.onMessage != nil {
-				datachannel.OnMessage(wrtcConnection.options.mainChannel.onMessage)
+			if wrtcConnection.options.mainChannel.OnMessage != nil {
+				datachannel.OnMessage(wrtcConnection.options.mainChannel.OnMessage)
 			}
 		} else {
 			// Other datachannels will be handled differently

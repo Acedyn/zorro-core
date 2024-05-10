@@ -1,0 +1,13 @@
+syntax = "proto3";
+option go_package = "github.com/Acedyn/zorro-core/testdata/rpc";
+
+package test.rpc;
+
+message Ping {}
+message Pong {}
+
+// Simple service used to test gRPC over webRTC protocol
+service EchoService{
+  // Basic ping pong exchange
+  rpc PingPong(Ping) returns (Pong);
+}

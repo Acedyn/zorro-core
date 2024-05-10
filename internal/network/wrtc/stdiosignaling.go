@@ -11,7 +11,7 @@ import (
 // Simple signaling method using stdin and stdout, the user will have to
 // use copy paste to exchange the offer and answers
 type stdIOSignaler struct {
-	genericSignaler
+	GenericSignaler
 	ctx    context.Context
 	reader io.Reader
 	writer io.Writer
@@ -92,11 +92,11 @@ func NewStdIoSignaler(options ...stdIOSignalerOption) *stdIOSignaler {
 		option(stdIOSignaler)
 	}
 
-	stdIOSignaler.genericSignaler = genericSignaler{
-		onSendOffer:     onSendSdpStdIO(stdIOSignaler, "SDP OFFER:"),
-		onReceiveOffer:  onReceiveSdpStdIO(stdIOSignaler, "SDP OFFER:"),
-		onSendAnswer:    onSendSdpStdIO(stdIOSignaler, "SDP ANSWER:"),
-		onReceiveAnswer: onReceiveSdpStdIO(stdIOSignaler, "SDP ANSWER:"),
+	stdIOSignaler.GenericSignaler = GenericSignaler{
+		OnSendOffer:     onSendSdpStdIO(stdIOSignaler, "SDP OFFER:"),
+		OnReceiveOffer:  onReceiveSdpStdIO(stdIOSignaler, "SDP OFFER:"),
+		OnSendAnswer:    onSendSdpStdIO(stdIOSignaler, "SDP ANSWER:"),
+		OnReceiveAnswer: onReceiveSdpStdIO(stdIOSignaler, "SDP ANSWER:"),
 	}
 
 	return stdIOSignaler

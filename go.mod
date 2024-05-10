@@ -3,11 +3,12 @@ module github.com/Acedyn/zorro-core
 go 1.21.3
 
 require (
-	github.com/Acedyn/zorro-proto v0.0.0-20240403091323-ddf4d74e1d7b
+	github.com/Acedyn/zorro-proto v0.0.0-20240430124212-1ca66a5366e0
 	github.com/hack-pad/hackpadfs v0.2.1
 	github.com/life4/genesis v1.10.2
 	github.com/pion/webrtc/v4 v4.0.0-beta.17
 	golang.org/x/text v0.14.0
+	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 )
 
@@ -34,4 +35,5 @@ require (
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
 )

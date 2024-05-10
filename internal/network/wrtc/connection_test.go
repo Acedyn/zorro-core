@@ -23,20 +23,25 @@ func mockedOnReceiveSdp(db map[string]chan string, key string) func() (string, e
 	}
 }
 
-// Test the connection between an answerer and an offerer
-// in two different goroutines
-func TestConnectionAsOffererAndAnswerer(t *testing.T) {
+func NewMockedSignaler() *GenericSignaler {
 	sdpDatabase := map[string]chan string{
 		"offer":  make(chan string),
 		"answer": make(chan string),
 	}
 
-	mockedSignaler := genericSignaler{
-		onSendOffer:     mockedOnSendSdp(sdpDatabase, "offer"),
-		onReceiveOffer:  mockedOnReceiveSdp(sdpDatabase, "offer"),
-		onSendAnswer:    mockedOnSendSdp(sdpDatabase, "answer"),
-		onReceiveAnswer: mockedOnReceiveSdp(sdpDatabase, "answer"),
+	return &GenericSignaler{
+		OnSendOffer:     mockedOnSendSdp(sdpDatabase, "offer"),
+		OnReceiveOffer:  mockedOnReceiveSdp(sdpDatabase, "offer"),
+		OnSendAnswer:    mockedOnSendSdp(sdpDatabase, "answer"),
+		OnReceiveAnswer: mockedOnReceiveSdp(sdpDatabase, "answer"),
 	}
+
+}
+
+// Test the connection between an answerer and an offerer
+// in two different goroutines
+func TestConnectionAsOffererAndAnswerer(t *testing.T) {
+	mockedSignaler := NewMockedSignaler()
 
 	// The connection will be canceled after two seconds
 	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*2)
@@ -50,10 +55,10 @@ func TestConnectionAsOffererAndAnswerer(t *testing.T) {
 	go func() {
 		messageChan := make(chan string)
 		connection, err := NewConnectionAsOfferer(
-			WithSignalerWRTCOption(&mockedSignaler),
+			WithSignalerWRTCOption(mockedSignaler),
 			WithContextWRTCOption(ctx),
 			WithMainChannelWRTCOption(DatachannelOptions{
-				onMessage: func(msg webrtc.DataChannelMessage) {
+				OnMessage: func(msg webrtc.DataChannelMessage) {
 					messageChan <- string(msg.Data)
 				},
 			}),
@@ -86,10 +91,10 @@ func TestConnectionAsOffererAndAnswerer(t *testing.T) {
 		messageChan := make(chan string)
 
 		connection, err := NewConnectionAsAnswerer(
-			WithSignalerWRTCOption(&mockedSignaler),
+			WithSignalerWRTCOption(mockedSignaler),
 			WithContextWRTCOption(ctx),
 			WithMainChannelWRTCOption(DatachannelOptions{
-				onMessage: func(msg webrtc.DataChannelMessage) {
+				OnMessage: func(msg webrtc.DataChannelMessage) {
 					messageChan <- string(msg.Data)
 				},
 			}),
@@ -137,20 +142,11 @@ func TestConnectionAsOffererAndAnswerer(t *testing.T) {
 
 // Test the creation and reception of datachannel between two peers
 func TestDatachannelCreation(t *testing.T) {
-	sdpDatabase := map[string]chan string{
-		"offer":  make(chan string),
-		"answer": make(chan string),
-	}
 	datachannelLabel := "testing"
 	offererMessage := "hello"
 	answererMessage := "world"
 
-	mockedSignaler := genericSignaler{
-		onSendOffer:     mockedOnSendSdp(sdpDatabase, "offer"),
-		onReceiveOffer:  mockedOnReceiveSdp(sdpDatabase, "offer"),
-		onSendAnswer:    mockedOnSendSdp(sdpDatabase, "answer"),
-		onReceiveAnswer: mockedOnReceiveSdp(sdpDatabase, "answer"),
-	}
+	mockedSignaler := NewMockedSignaler()
 
 	// The connection will be canceled after two seconds
 	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*2)
@@ -161,7 +157,7 @@ func TestDatachannelCreation(t *testing.T) {
 	go func() {
 		messageChan := make(chan string)
 		connection, err := NewConnectionAsOfferer(
-			WithSignalerWRTCOption(&mockedSignaler),
+			WithSignalerWRTCOption(mockedSignaler),
 			WithContextWRTCOption(ctx),
 		)
 		if err != nil {
@@ -171,7 +167,7 @@ func TestDatachannelCreation(t *testing.T) {
 
 		// Create a new channel with a custom ID and its handlers
 		datachannel, err := connection.CreateDatachannel(ctx, datachannelLabel, DatachannelOptions{
-			onMessage: func(msg webrtc.DataChannelMessage) {
+			OnMessage: func(msg webrtc.DataChannelMessage) {
 				messageChan <- string(msg.Data)
 			},
 		})
@@ -206,7 +202,7 @@ func TestDatachannelCreation(t *testing.T) {
 	go func() {
 		messageChan := make(chan string)
 		connection, err := NewConnectionAsAnswerer(
-			WithSignalerWRTCOption(&mockedSignaler),
+			WithSignalerWRTCOption(mockedSignaler),
 			WithContextWRTCOption(ctx),
 		)
 		if err != nil {
@@ -216,7 +212,7 @@ func TestDatachannelCreation(t *testing.T) {
 
 		// Receive a new channel with a custom ID and its handlers
 		datachannel, err := connection.ReceiveDatachannel(ctx, datachannelLabel, DatachannelOptions{
-			onMessage: func(msg webrtc.DataChannelMessage) {
+			OnMessage: func(msg webrtc.DataChannelMessage) {
 				messageChan <- string(msg.Data)
 			},
 		})
