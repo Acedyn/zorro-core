@@ -1,8 +1,10 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Acedyn/zorro-core/internal/network/wrtc"
 
@@ -10,10 +12,12 @@ import (
 	"github.com/pion/webrtc/v4"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type StreamInterface interface {
 	GetId() uint64
+	GetStream() *network_proto.Stream
 }
 
 type GrpcOverWrtcBase[T StreamInterface] struct {
@@ -44,6 +48,59 @@ func (base *GrpcOverWrtcBase[T]) send(msg proto.Message) error {
 		return fmt.Errorf("could not send message, proto marshaling failed: %w", err)
 	}
 	return nil
+}
+
+// Build and send the header frame to the server to initialize an rpc invokation
+func (base *GrpcOverWrtcBase[T]) writeHeaders(ctx context.Context, stream *ClientStream, method string) error {
+	// Get the metadata from the context's metadata
+	headersMD, _ := metadata.FromOutgoingContext(ctx)
+	// Get the timeout from the context's deadline
+	var timeout time.Duration
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = time.Until(deadline)
+	}
+	// Build the headers as a proto message
+	headers := network_proto.RequestHeaders{
+		Method:   method,
+		Timeout:  durationpb.New(timeout),
+		Metadata: metadataToProto(headersMD),
+	}
+
+	// Build and send the request proto header
+	return base.send(&network_proto.Request{
+		Stream: stream.Stream,
+		Type: &network_proto.Request_Headers{
+			Headers: &headers,
+		},
+	})
+}
+
+// Build and send the message frame
+func (base *GrpcOverWrtcBase[T]) writeMessage(stream T, in any, endOfStream bool) error {
+	var err error
+	var data []byte
+
+	// Marshall the input argument of the rpc method
+	if in != nil {
+		data, err = proto.Marshal(in.(proto.Message))
+		if err != nil {
+			return err
+		}
+	}
+
+	// Build and send the request proto message
+	return base.send(&network_proto.Request{
+		Stream: stream.GetStream(),
+		Type: &network_proto.Request_Message{
+			Message: &network_proto.RequestMessage{
+				Eos:        endOfStream,
+				HasMessage: in != nil,
+				PacketMessage: &network_proto.PacketMessage{
+					Data: data,
+				},
+			},
+		},
+	})
 }
 
 // Convert grpc metadata to protobuf metadata so it can be serialized

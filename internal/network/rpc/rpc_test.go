@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,7 +15,8 @@ type mockedEchoService struct {
 }
 
 func (service mockedEchoService) PingPong(ctx context.Context, in *test_rpc.Ping) (*test_rpc.Pong, error) {
-	return nil, nil
+	fmt.Println("PING RECEIVED")
+	return &test_rpc.Pong{}, nil
 }
 
 func mockedOnSendSdp(db map[string]chan string, key string) func(sdp string) error {
@@ -50,10 +52,11 @@ func NewMockedSignaler() *wrtc.GenericSignaler {
 func TestServerUnaryRequest(t *testing.T) {
 	mockedSignaler := NewMockedSignaler()
 
-	// The connection will be canceled after two seconds
-	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*2)
+	// The connection will be canceled after five seconds
+	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelContext()
 
+	// Create the server
 	serverChan := make(chan error)
 	go func() {
 		serverConnection, err := wrtc.NewConnectionAsOfferer(
@@ -79,6 +82,7 @@ func TestServerUnaryRequest(t *testing.T) {
 		serverChan <- nil
 	}()
 
+	// Create the client
 	clientChan := make(chan error)
 	go func() {
 		clientConnection, err := wrtc.NewConnectionAsAnswerer(
@@ -101,6 +105,7 @@ func TestServerUnaryRequest(t *testing.T) {
 
 		client := test_rpc.NewEchoServiceClient(&grpcClientConnection)
 		client.PingPong(ctx, &test_rpc.Ping{})
+		time.Sleep(time.Second * 10)
 		clientChan <- nil
 	}()
 

@@ -4,26 +4,30 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/Acedyn/zorro-core/internal/network/wrtc"
 
 	network_proto "github.com/Acedyn/zorro-proto/gen/protos/network"
 	"github.com/pion/webrtc/v4"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // Create and setup a datachannel to allow the peer to act as a GRPC client
 // with the other peer
 func SetupGrpcOverWrtcClient(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverWrtcOption) (GrpcOverWrtcClient, error) {
-	grpcOverWrtcBase, err := setupGrpcOverWrtc[*ClientStream](wrtcConnection, onClientMessage, options...)
+	grpcOverWrtcClient := GrpcOverWrtcClient{
+		streamIDCounter: 0,
+	}
 
-	return GrpcOverWrtcClient{
-		GrpcOverWrtcBase: grpcOverWrtcBase,
-	}, err
+	// Inject the server logic on every messages
+	onClientMessage := func(msg webrtc.DataChannelMessage) {
+		go grpcOverWrtcClient.onMessage(msg)
+	}
+
+	grpcOverWrtcBase, err := setupGrpcOverWrtc[*ClientStream](wrtcConnection, onClientMessage, options...)
+	grpcOverWrtcClient.GrpcOverWrtcBase = grpcOverWrtcBase
+
+	return grpcOverWrtcClient, err
 }
 
 type GrpcOverWrtcClient struct {
@@ -68,59 +72,6 @@ func (client *GrpcOverWrtcClient) NewStream(
 	return nil, nil
 }
 
-// Build and send the header frame to the server to initialize an rpc invokation
-func (client *GrpcOverWrtcClient) writeHeaders(ctx context.Context, stream *ClientStream, method string) error {
-	// Get the metadata from the context's metadata
-	headersMD, _ := metadata.FromOutgoingContext(ctx)
-	// Get the timeout from the context's deadline
-	var timeout time.Duration
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout = time.Until(deadline)
-	}
-	// Build the headers as a proto message
-	headers := network_proto.RequestHeaders{
-		Method:   method,
-		Timeout:  durationpb.New(timeout),
-		Metadata: metadataToProto(headersMD),
-	}
-
-	// Build and send the request proto header
-	return client.send(&network_proto.Request{
-		Stream: stream.Stream,
-		Type: &network_proto.Request_Headers{
-			Headers: &headers,
-		},
-	})
-}
-
-// Build and send the message frame
-func (client *GrpcOverWrtcClient) writeMessage(stream *ClientStream, in any, endOfStream bool) error {
-	var err error
-	var data []byte
-
-	// Marshall the input argument of the rpc method
-	if in != nil {
-		data, err = proto.Marshal(in.(proto.Message))
-		if err != nil {
-			return err
-		}
-	}
-
-	// Build and send the request proto message
-	return client.send(&network_proto.Request{
-		Stream: stream.Stream,
-		Type: &network_proto.Request_Message{
-			Message: &network_proto.RequestMessage{
-				Eos:        endOfStream,
-				HasMessage: in != nil,
-				PacketMessage: &network_proto.PacketMessage{
-					Data: data,
-				},
-			},
-		},
-	})
-}
-
 // Create a new stream in a thread safe manner and generate its ID
 func (client *GrpcOverWrtcClient) newStream() *ClientStream {
 	id := atomic.AddUint64(&client.streamIDCounter, 1)
@@ -133,11 +84,15 @@ func (client *GrpcOverWrtcClient) newStream() *ClientStream {
 }
 
 // Inject the client logic on every messages
-func onClientMessage(msg webrtc.DataChannelMessage) {
-
+func (client *GrpcOverWrtcClient) onMessage(msg webrtc.DataChannelMessage) {
+	fmt.Println("MESSAGE RECEIVED")
 }
 
 // Logic and data related to a stream on the client side
 type ClientStream struct {
 	*network_proto.Stream
+}
+
+func (stream *ClientStream) GetStream() *network_proto.Stream {
+	return stream.Stream
 }

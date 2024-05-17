@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/grpc"
 )
@@ -36,14 +37,12 @@ func serverUnaryHandler(service interface{}, handler methodHandler) serverHandle
 		// output of the method will be dealt by the passed interceptor function
 		response, err := handler(service, ctx, stream.receiveMessage, serverUnaryInterceptor)
 		if err != nil {
-			// TODO Log errors
-			return nil
+			return fmt.Errorf("an error occured when executing the unary method handler: %w", err)
 		}
 
 		err = stream.sendMessage(response)
 		if err != nil {
-			// TODO Log errors
-			return nil
+			return fmt.Errorf("could not send message for unary request handler: %w", err)
 		}
 
 		return nil
