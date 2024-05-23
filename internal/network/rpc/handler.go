@@ -8,7 +8,7 @@ import (
 )
 
 // This method will be called to handle a new method request
-type serverHandlerFunc func(s *ServerStream) error
+type serverHandlerFunc func(s *Stream) error
 
 // Represent the handler generated from the proto file
 type methodHandler func(
@@ -19,7 +19,7 @@ type methodHandler func(
 ) (interface{}, error)
 
 // The interceptor is passsed to the service's handler to deal with the output of the method after it was called
-func serverUnaryInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+func unaryRequestInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	// This is the actual implemented method of the service
 	resp, err := handler(ctx, req)
 	if err == nil {
@@ -29,18 +29,18 @@ func serverUnaryInterceptor(ctx context.Context, req any, info *grpc.UnaryServer
 }
 
 // Create an handler for unary requests that will call the service's handler, give it the appropriate receiver method and interceptor
-func serverUnaryHandler(service interface{}, handler methodHandler) serverHandlerFunc {
-	return func(stream *ServerStream) error {
+func unaryRequestHandler(service interface{}, handler methodHandler) serverHandlerFunc {
+	return func(stream *Stream) error {
 		ctx := grpc.NewContextWithServerTransportStream(stream.ctx, stream)
 
 		// The service's handler will wait for a message using the passed receiveMessage function, execute the method and the
 		// output of the method will be dealt by the passed interceptor function
-		response, err := handler(service, ctx, stream.receiveMessage, serverUnaryInterceptor)
+		response, err := handler(service, ctx, stream.receiveMessage, unaryRequestInterceptor)
 		if err != nil {
 			return fmt.Errorf("an error occured when executing the unary method handler: %w", err)
 		}
 
-		err = stream.sendMessage(response)
+		err = stream.sendResponseMessage(response)
 		if err != nil {
 			return fmt.Errorf("could not send message for unary request handler: %w", err)
 		}

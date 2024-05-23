@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/Acedyn/zorro-core/internal/network/wrtc"
 
@@ -47,15 +48,16 @@ func WithAsOfferer(asOfferer bool) GrpcOverWrtcOption {
 	}
 }
 
-// Select custom datachannel options
-func WithDatachannelOptions(datachannelOptions *wrtc.DatachannelOptions) GrpcOverWrtcOption {
+// Select custom datachannel options. This option is for internal use only
+func withDatachannelOptions(datachannelOptions *wrtc.DatachannelOptions) GrpcOverWrtcOption {
 	return func(options *GrpcOverWrtcOptions) {
 		options.datachannelOptions = *datachannelOptions
 	}
 }
 
 // Create the datachannel used to setup the grpc connection with the peer
-func SetupGrpcOverWrtc(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverWrtcOption) (*webrtc.DataChannel, error) {
+func setupGrpcOverWrtc(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverWrtcOption,
+) (*GrpcOverWrtcNode, error) {
 	grpcOverWrtcOption := DefaultGrpcOverWrtcOptions
 	for _, option := range options {
 		option(&grpcOverWrtcOption)
@@ -120,7 +122,12 @@ func SetupGrpcOverWrtc(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverW
 		if output.err != nil {
 			return nil, fmt.Errorf("an error occured while seting up GRPC server over WRTC: %w", output.err)
 		}
-		return output.datachannel, nil
+
+		return &GrpcOverWrtcNode{
+			datachannel: output.datachannel,
+			streams:     map[uint64]*Stream{},
+			streamMutex: sync.Mutex{},
+		}, nil
 	case <-grpcOverWrtcOption.ctx.Done():
 		return nil, fmt.Errorf("grpc over wrtc server setup canceled")
 	}
