@@ -39,25 +39,9 @@ func (node *GrpcOverWrtcNode) getStream(streamProto *network_proto.Stream) (*Str
 	defer node.streamMutex.Unlock()
 	stream, ok := node.streams[streamProto.GetId()]
 	if !ok {
-		return stream, fmt.Errorf("no stream with id %s found in grpc over wrtc node", streamProto.GetId())
+		return stream, fmt.Errorf("no stream with id %v found in grpc over wrtc node", streamProto.GetId())
 	}
 	return stream, nil
-}
-
-// build a message frame in protobuf format
-func (node *GrpcOverWrtcNode) buildMessage(stream Stream, in any, endOfStream bool) ([]byte, error) {
-	var err error
-	var data []byte
-
-	// Marshall the input argument of the rpc method
-	if in != nil {
-		data, err = proto.Marshal(in.(proto.Message))
-		if err != nil {
-			return nil, fmt.Errorf("message %v cannot be marshalled: %w", err)
-		}
-	}
-
-	return data, nil
 }
 
 // Send a message frame to the other peer after marshalling the message and

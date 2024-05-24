@@ -5,9 +5,18 @@ package test.rpc;
 
 message Ping {}
 message Pong {}
+message Count {
+  int32 number = 1;
+}
 
 // Simple service used to test gRPC over webRTC protocol
 service EchoService{
   // Basic ping pong exchange
   rpc PingPong(Ping) returns (Pong);
+  // Return pong every 0.1 seconds
+  rpc PingPongInfinite(Ping) returns (stream Pong);
+  // Return the ping count
+  rpc PingPongCount(stream Ping) returns (Count);
+  // Return the ping count every 0.1 seconds
+  rpc PingPongInfiniteCount(stream Ping) returns (stream Count);
 }

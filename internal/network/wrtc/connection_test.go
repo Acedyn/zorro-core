@@ -9,6 +9,7 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
+// Mocking of the sdp signaling
 func mockedOnSendSdp(db map[string]chan string, key string) func(sdp string) error {
 	return func(sdp string) error {
 		db[key] <- sdp

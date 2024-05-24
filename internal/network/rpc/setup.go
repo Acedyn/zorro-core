@@ -124,6 +124,7 @@ func setupGrpcOverWrtc(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverW
 		}
 
 		return &GrpcOverWrtcNode{
+			ctx:         grpcOverWrtcOption.ctx,
 			datachannel: output.datachannel,
 			streams:     map[uint64]*Stream{},
 			streamMutex: sync.Mutex{},

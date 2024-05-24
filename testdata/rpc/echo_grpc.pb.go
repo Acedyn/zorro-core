@@ -24,6 +24,12 @@ const _ = grpc.SupportPackageIsVersion7
 type EchoServiceClient interface {
 	// Basic ping pong exchange
 	PingPong(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error)
+	// Return pong every 0.1 seconds
+	PingPongInfinite(ctx context.Context, in *Ping, opts ...grpc.CallOption) (EchoService_PingPongInfiniteClient, error)
+	// Return the ping count
+	PingPongCount(ctx context.Context, opts ...grpc.CallOption) (EchoService_PingPongCountClient, error)
+	// Return the ping count every 0.1 seconds
+	PingPongInfiniteCount(ctx context.Context, opts ...grpc.CallOption) (EchoService_PingPongInfiniteCountClient, error)
 }
 
 type echoServiceClient struct {
@@ -43,12 +49,115 @@ func (c *echoServiceClient) PingPong(ctx context.Context, in *Ping, opts ...grpc
 	return out, nil
 }
 
+func (c *echoServiceClient) PingPongInfinite(ctx context.Context, in *Ping, opts ...grpc.CallOption) (EchoService_PingPongInfiniteClient, error) {
+	stream, err := c.cc.NewStream(ctx, &EchoService_ServiceDesc.Streams[0], "/test.rpc.EchoService/PingPongInfinite", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &echoServicePingPongInfiniteClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type EchoService_PingPongInfiniteClient interface {
+	Recv() (*Pong, error)
+	grpc.ClientStream
+}
+
+type echoServicePingPongInfiniteClient struct {
+	grpc.ClientStream
+}
+
+func (x *echoServicePingPongInfiniteClient) Recv() (*Pong, error) {
+	m := new(Pong)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *echoServiceClient) PingPongCount(ctx context.Context, opts ...grpc.CallOption) (EchoService_PingPongCountClient, error) {
+	stream, err := c.cc.NewStream(ctx, &EchoService_ServiceDesc.Streams[1], "/test.rpc.EchoService/PingPongCount", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &echoServicePingPongCountClient{stream}
+	return x, nil
+}
+
+type EchoService_PingPongCountClient interface {
+	Send(*Ping) error
+	CloseAndRecv() (*Count, error)
+	grpc.ClientStream
+}
+
+type echoServicePingPongCountClient struct {
+	grpc.ClientStream
+}
+
+func (x *echoServicePingPongCountClient) Send(m *Ping) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *echoServicePingPongCountClient) CloseAndRecv() (*Count, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Count)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *echoServiceClient) PingPongInfiniteCount(ctx context.Context, opts ...grpc.CallOption) (EchoService_PingPongInfiniteCountClient, error) {
+	stream, err := c.cc.NewStream(ctx, &EchoService_ServiceDesc.Streams[2], "/test.rpc.EchoService/PingPongInfiniteCount", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &echoServicePingPongInfiniteCountClient{stream}
+	return x, nil
+}
+
+type EchoService_PingPongInfiniteCountClient interface {
+	Send(*Ping) error
+	Recv() (*Count, error)
+	grpc.ClientStream
+}
+
+type echoServicePingPongInfiniteCountClient struct {
+	grpc.ClientStream
+}
+
+func (x *echoServicePingPongInfiniteCountClient) Send(m *Ping) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *echoServicePingPongInfiniteCountClient) Recv() (*Count, error) {
+	m := new(Count)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // EchoServiceServer is the server API for EchoService service.
 // All implementations must embed UnimplementedEchoServiceServer
 // for forward compatibility
 type EchoServiceServer interface {
 	// Basic ping pong exchange
 	PingPong(context.Context, *Ping) (*Pong, error)
+	// Return pong every 0.1 seconds
+	PingPongInfinite(*Ping, EchoService_PingPongInfiniteServer) error
+	// Return the ping count
+	PingPongCount(EchoService_PingPongCountServer) error
+	// Return the ping count every 0.1 seconds
+	PingPongInfiniteCount(EchoService_PingPongInfiniteCountServer) error
 	mustEmbedUnimplementedEchoServiceServer()
 }
 
@@ -58,6 +167,15 @@ type UnimplementedEchoServiceServer struct {
 
 func (UnimplementedEchoServiceServer) PingPong(context.Context, *Ping) (*Pong, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PingPong not implemented")
+}
+func (UnimplementedEchoServiceServer) PingPongInfinite(*Ping, EchoService_PingPongInfiniteServer) error {
+	return status.Errorf(codes.Unimplemented, "method PingPongInfinite not implemented")
+}
+func (UnimplementedEchoServiceServer) PingPongCount(EchoService_PingPongCountServer) error {
+	return status.Errorf(codes.Unimplemented, "method PingPongCount not implemented")
+}
+func (UnimplementedEchoServiceServer) PingPongInfiniteCount(EchoService_PingPongInfiniteCountServer) error {
+	return status.Errorf(codes.Unimplemented, "method PingPongInfiniteCount not implemented")
 }
 func (UnimplementedEchoServiceServer) mustEmbedUnimplementedEchoServiceServer() {}
 
@@ -90,6 +208,79 @@ func _EchoService_PingPong_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EchoService_PingPongInfinite_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Ping)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(EchoServiceServer).PingPongInfinite(m, &echoServicePingPongInfiniteServer{stream})
+}
+
+type EchoService_PingPongInfiniteServer interface {
+	Send(*Pong) error
+	grpc.ServerStream
+}
+
+type echoServicePingPongInfiniteServer struct {
+	grpc.ServerStream
+}
+
+func (x *echoServicePingPongInfiniteServer) Send(m *Pong) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _EchoService_PingPongCount_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(EchoServiceServer).PingPongCount(&echoServicePingPongCountServer{stream})
+}
+
+type EchoService_PingPongCountServer interface {
+	SendAndClose(*Count) error
+	Recv() (*Ping, error)
+	grpc.ServerStream
+}
+
+type echoServicePingPongCountServer struct {
+	grpc.ServerStream
+}
+
+func (x *echoServicePingPongCountServer) SendAndClose(m *Count) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *echoServicePingPongCountServer) Recv() (*Ping, error) {
+	m := new(Ping)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _EchoService_PingPongInfiniteCount_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(EchoServiceServer).PingPongInfiniteCount(&echoServicePingPongInfiniteCountServer{stream})
+}
+
+type EchoService_PingPongInfiniteCountServer interface {
+	Send(*Count) error
+	Recv() (*Ping, error)
+	grpc.ServerStream
+}
+
+type echoServicePingPongInfiniteCountServer struct {
+	grpc.ServerStream
+}
+
+func (x *echoServicePingPongInfiniteCountServer) Send(m *Count) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *echoServicePingPongInfiniteCountServer) Recv() (*Ping, error) {
+	m := new(Ping)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // EchoService_ServiceDesc is the grpc.ServiceDesc for EchoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +293,23 @@ var EchoService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EchoService_PingPong_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "PingPongInfinite",
+			Handler:       _EchoService_PingPongInfinite_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "PingPongCount",
+			Handler:       _EchoService_PingPongCount_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "PingPongInfiniteCount",
+			Handler:       _EchoService_PingPongInfiniteCount_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "testdata/rpc/echo.proto",
 }

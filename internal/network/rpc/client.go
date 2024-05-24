@@ -46,34 +46,37 @@ type GrpcOverWrtcClient struct {
 // this is typically called by the generated code
 func (client *GrpcOverWrtcClient) Invoke(ctx context.Context, method string, in, out any, options ...grpc.CallOption) error {
 	// Register the stream first
-	stream := client.newStream(ctx, method)
+	stream, err := client.newStream(ctx, &grpc.StreamDesc{}, method, options...)
 	defer client.removeStream(stream)
-
-	// TODO: Use the provided options
+	if err != nil {
+		return fmt.Errorf("an error occured when creating stream: %w", err)
+	}
 
 	// Send the header first, we are counting on the datachannel to make sure the
 	// headers is received before the actuall message
-	err := stream.sendRequestHeaders(ctx, method)
+	err = stream.sendRequestHeaders(ctx, method)
 	if err != nil {
-		return fmt.Errorf("an error occured when writing rpc headers: %s", err)
+		return fmt.Errorf("an error occured when writing rpc headers: %w", err)
 	}
 
 	// Send the message containing the rpc input arg and set the end of stream directly
 	// since this is an unary rpc call
 	err = stream.sendRequestMessage(in, true)
 	if err != nil {
-		return fmt.Errorf("an error occured when writing rpc headers: %s", err)
+		return fmt.Errorf("an error occured when writing rpc headers: %w", err)
 	}
 
-	err = stream.receiveMessage(out)
+	err = stream.RecvMsg(out)
 	if err != nil {
-		return fmt.Errorf("an error occured when receiving the server's answer: %s", err)
+		return fmt.Errorf("an error occured when receiving the server's answer: %w", err)
 	}
 	return nil
 }
 
 // Create a new stream in a thread safe manner and generate its ID
-func (client *GrpcOverWrtcClient) newStream(ctx context.Context, method string) *Stream {
+func (client *GrpcOverWrtcClient) newStream(
+	ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption,
+) (*Stream, error) {
 	id := atomic.AddUint64(&client.streamIDCounter, 1)
 	ctx, cancelCtx := context.WithCancel(ctx)
 	headersMetadata, _ := metadata.FromOutgoingContext(ctx)
@@ -91,7 +94,15 @@ func (client *GrpcOverWrtcClient) newStream(ctx context.Context, method string) 
 	}
 
 	client.storeStream(newStream)
-	return newStream
+	return newStream, nil
+}
+
+// Method to satisfy the grpc.ClientConnInterface interface
+func (client *GrpcOverWrtcClient) NewStream(
+	ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption,
+) (grpc.ClientStream, error) {
+	stream, err := client.newStream(ctx, desc, method, options...)
+	return &ClientStream{Stream: stream}, err
 }
 
 // Transfer the incomming responses to the appropriate stream

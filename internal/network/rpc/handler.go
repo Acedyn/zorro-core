@@ -35,7 +35,7 @@ func unaryRequestHandler(service interface{}, handler methodHandler) serverHandl
 
 		// The service's handler will wait for a message using the passed receiveMessage function, execute the method and the
 		// output of the method will be dealt by the passed interceptor function
-		response, err := handler(service, ctx, stream.receiveMessage, unaryRequestInterceptor)
+		response, err := handler(service, ctx, stream.RecvMsg, unaryRequestInterceptor)
 		if err != nil {
 			return fmt.Errorf("an error occured when executing the unary method handler: %w", err)
 		}

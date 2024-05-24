@@ -117,7 +117,7 @@ func (stream *Stream) storeIncommingMessage(message []byte) error {
 }
 
 // Wait for the next message and apply the result on the given proto
-func (stream *Stream) receiveMessage(m any) error {
+func (stream *Stream) RecvMsg(m any) error {
 	select {
 	case <-stream.ctx.Done():
 		return fmt.Errorf("message reception canceled: %w", stream.ctx.Err())
@@ -126,9 +126,28 @@ func (stream *Stream) receiveMessage(m any) error {
 	}
 }
 
+// Getter for the context
+func (stream *Stream) Context() context.Context {
+	return stream.ctx
+}
+
 // Getter for the method name
 func (stream *Stream) Method() string {
 	return stream.method
+}
+
+// Getter for the trailer
+func (stream *Stream) Trailer() metadata.MD {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+	return stream.trailer.Copy()
+}
+
+// Getter for the header
+func (stream *Stream) Header() (metadata.MD, error) {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+	return stream.header.Copy(), nil
 }
 
 // SetTrailer sets the trailer metadata which will be sent with the RPC status.
@@ -170,3 +189,14 @@ func (stream *Stream) SendHeader(header metadata.MD) error {
 	// TODO: Implement the headers sending
 	return nil
 }
+
+// Create client and server structs to satisfy the grpc.ServerStream and grpc.ClientStream
+// interfaces
+type ClientStream struct{ *Stream }
+
+func (s *ClientStream) CloseSend() error    { return s.sendRequestMessage(nil, true) }
+func (s *ClientStream) SendMsg(m any) error { return s.sendRequestMessage(m, false) }
+
+type ServerStream struct{ *Stream }
+
+func (s *ServerStream) SendMsg(m any) error { return s.sendResponseMessage(m) }

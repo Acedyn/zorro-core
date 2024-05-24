@@ -26,7 +26,7 @@ func NewServer(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverWrtcOptio
 	// Inject the client logic on every messages
 	options = append(options, withDatachannelOptions(&wrtc.DatachannelOptions{
 		OnMessage: func(msg webrtc.DataChannelMessage) {
-			go grpcOverWrtcServer.onMessage(msg)
+			grpcOverWrtcServer.onMessage(msg)
 		},
 	}))
 
@@ -54,18 +54,18 @@ type GrpcOverWrtcServer struct {
 // RegisterService registers the given implementation of a service to be handled via
 // WebRTC data channels. It extracts the unary and stream methods from a service description
 // and calls the methods on the implementation when requested via a data channel.
-func (server *GrpcOverWrtcServer) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
+func (server *GrpcOverWrtcServer) RegisterService(desc *grpc.ServiceDesc, impl any) {
 	info := &serviceInfo{
-		methods:  make(map[string]*grpc.MethodDesc, len(sd.Methods)),
-		streams:  make(map[string]*grpc.StreamDesc, len(sd.Streams)),
-		metadata: sd.Metadata,
+		methods:  make(map[string]*grpc.MethodDesc, len(desc.Methods)),
+		streams:  make(map[string]*grpc.StreamDesc, len(desc.Streams)),
+		metadata: desc.Metadata,
 	}
-	for i := range sd.Methods {
-		d := &sd.Methods[i]
+	for i := range desc.Methods {
+		d := &desc.Methods[i]
 		info.methods[d.MethodName] = d
 	}
-	for i := range sd.Streams {
-		d := &sd.Streams[i]
+	for i := range desc.Streams {
+		d := &desc.Streams[i]
 		info.streams[d.StreamName] = d
 	}
 
@@ -74,15 +74,15 @@ func (server *GrpcOverWrtcServer) RegisterService(sd *grpc.ServiceDesc, ss inter
 	server.servicesMutex.Lock()
 	defer server.servicesMutex.Unlock()
 
-	for i := range sd.Methods {
-		desc := &sd.Methods[i]
-		info.methods[desc.MethodName] = desc
-		path := fmt.Sprintf("/%v/%v", sd.ServiceName, desc.MethodName)
-		server.handlers[path] = unaryRequestHandler(ss, methodHandler(desc.Handler))
+	for i := range desc.Methods {
+		methodDesc := &desc.Methods[i]
+		info.methods[methodDesc.MethodName] = methodDesc
+		path := fmt.Sprintf("/%v/%v", desc.ServiceName, methodDesc.MethodName)
+		server.handlers[path] = unaryRequestHandler(impl, methodHandler(methodDesc.Handler))
 	}
 	// TODO: Register streams too
 
-	server.services[sd.ServiceName] = info
+	server.services[desc.ServiceName] = info
 }
 
 // Create a new stream in a thread safe manner and generate its ID
@@ -167,13 +167,14 @@ func (server *GrpcOverWrtcServer) onMessage(msg webrtc.DataChannelMessage) {
 		server.handlersMutex.Unlock()
 
 		// Call the handler
-		err := handlerFunc(stream)
-		if err != nil {
-			server.logError(
-				"Handler for method %s failed", err, r.Headers.Method,
-			)
-			return
-		}
+		go func() {
+			err := handlerFunc(stream)
+			if err != nil {
+				server.logError(
+					"Handler for method %s failed", err, r.Headers.Method,
+				)
+			}
+		}()
 	case *network_proto.Request_Message:
 		stream.storeIncommingMessage(r.Message.PacketMessage.GetData())
 	case *network_proto.Request_RstStream:
