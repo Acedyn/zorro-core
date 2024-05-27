@@ -78,9 +78,15 @@ func (server *GrpcOverWrtcServer) RegisterService(desc *grpc.ServiceDesc, impl a
 		methodDesc := &desc.Methods[i]
 		info.methods[methodDesc.MethodName] = methodDesc
 		path := fmt.Sprintf("/%v/%v", desc.ServiceName, methodDesc.MethodName)
-		server.handlers[path] = unaryRequestHandler(impl, methodHandler(methodDesc.Handler))
+		server.handlers[path] = unaryRequestHandler(impl, methodDesc)
 	}
-	// TODO: Register streams too
+
+	for i := range desc.Streams {
+		streamDesc := &desc.Streams[i]
+		info.streams[streamDesc.StreamName] = streamDesc
+		path := fmt.Sprintf("/%v/%v", desc.ServiceName, streamDesc.StreamName)
+		server.handlers[path] = streamRequestHandler(impl, streamDesc)
+	}
 
 	server.services[desc.ServiceName] = info
 }
@@ -91,11 +97,12 @@ func (server *GrpcOverWrtcServer) newStream(id uint64, headers *network_proto.Re
 	headersMetadata := metadataFromProto(headers.GetMetadata())
 	ctx := metadata.NewIncomingContext(server.ctx, headersMetadata)
 	timeout := headers.Timeout.AsDuration()
-	var cancelCtx func()
+	var cancelCtx func(error)
 	if timeout == 0 {
-		ctx, cancelCtx = context.WithCancel(ctx)
+		ctx, cancelCtx = context.WithCancelCause(ctx)
 	} else {
-		ctx, cancelCtx = context.WithTimeout(ctx, timeout)
+		ctx, _ = context.WithTimeoutCause(ctx, timeout, fmt.Errorf("stream timed out (%+v)", timeout))
+		ctx, cancelCtx = context.WithCancelCause(ctx)
 	}
 
 	newStream := &Stream{

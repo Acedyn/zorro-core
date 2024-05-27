@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"sync/atomic"
 
@@ -11,8 +12,10 @@ import (
 
 	network_proto "github.com/Acedyn/zorro-proto/gen/protos/network"
 	"github.com/pion/webrtc/v4"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -52,13 +55,6 @@ func (client *GrpcOverWrtcClient) Invoke(ctx context.Context, method string, in,
 		return fmt.Errorf("an error occured when creating stream: %w", err)
 	}
 
-	// Send the header first, we are counting on the datachannel to make sure the
-	// headers is received before the actuall message
-	err = stream.sendRequestHeaders(ctx, method)
-	if err != nil {
-		return fmt.Errorf("an error occured when writing rpc headers: %w", err)
-	}
-
 	// Send the message containing the rpc input arg and set the end of stream directly
 	// since this is an unary rpc call
 	err = stream.sendRequestMessage(in, true)
@@ -66,6 +62,7 @@ func (client *GrpcOverWrtcClient) Invoke(ctx context.Context, method string, in,
 		return fmt.Errorf("an error occured when writing rpc headers: %w", err)
 	}
 
+	// Wait for the output message
 	err = stream.RecvMsg(out)
 	if err != nil {
 		return fmt.Errorf("an error occured when receiving the server's answer: %w", err)
@@ -78,7 +75,7 @@ func (client *GrpcOverWrtcClient) newStream(
 	ctx context.Context, desc *grpc.StreamDesc, method string, options ...grpc.CallOption,
 ) (*Stream, error) {
 	id := atomic.AddUint64(&client.streamIDCounter, 1)
-	ctx, cancelCtx := context.WithCancel(ctx)
+	ctx, cancelCtx := context.WithCancelCause(ctx)
 	headersMetadata, _ := metadata.FromOutgoingContext(ctx)
 
 	newStream := &Stream{
@@ -94,6 +91,14 @@ func (client *GrpcOverWrtcClient) newStream(
 	}
 
 	client.storeStream(newStream)
+
+	// Send the header first, we are counting on the datachannel to make sure the
+	// headers is received before the actuall message
+	err := newStream.sendRequestHeaders(ctx, method)
+	if err != nil {
+		return nil, fmt.Errorf("an error occured when writing rpc headers: %w", err)
+	}
+
 	return newStream, nil
 }
 
@@ -145,8 +150,28 @@ func (client *GrpcOverWrtcClient) onMessage(msg webrtc.DataChannelMessage) {
 		// TODO: Patch the stream headers
 		return
 	case *network_proto.Response_Trailers:
-		// TODO: Patch the stream trailers
-		return
+		stream.mutex.Lock()
+		defer stream.mutex.Unlock()
+		stream.trailer = metadataFromProto(r.Trailers.Metadata)
+
+		// TODO: Find a better way to convert from network_proto.Status to grpc.status.Status
+		statusRaw, err := proto.Marshal(r.Trailers.Status)
+		if err != nil {
+			utils.Logger().Error("ERROR")
+		}
+
+		statusProto := &spb.Status{}
+		err = proto.Unmarshal(statusRaw, statusProto)
+		if err != nil {
+			utils.Logger().Error("ERROR")
+		}
+		trailerStatus := status.FromProto(statusProto)
+
+		if trailerStatus.Err() == nil {
+			stream.cancel(io.EOF)
+		} else {
+			stream.cancel(trailerStatus.Err())
+		}
 	case *network_proto.Response_Message:
 		stream.storeIncommingMessage(r.Message.PacketMessage.GetData())
 	default:

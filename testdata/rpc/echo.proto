@@ -13,10 +13,10 @@ message Count {
 service EchoService{
   // Basic ping pong exchange
   rpc PingPong(Ping) returns (Pong);
-  // Return pong every 0.1 seconds
-  rpc PingPongInfinite(Ping) returns (stream Pong);
+  // Return 10 pong
+  rpc PingPongMultiple(Ping) returns (stream Pong);
   // Return the ping count
   rpc PingPongCount(stream Ping) returns (Count);
-  // Return the ping count every 0.1 seconds
-  rpc PingPongInfiniteCount(stream Ping) returns (stream Count);
+  // Return the ping count every 10 ping
+  rpc PingPongMultipleCount(stream Ping) returns (stream Count);
 }

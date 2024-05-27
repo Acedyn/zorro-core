@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -19,7 +20,13 @@ func (service mockedEchoService) PingPong(ctx context.Context, in *test_rpc.Ping
 	return &test_rpc.Pong{}, nil
 }
 
-func (service mockedEchoService) PingPongInfinite(in *test_rpc.Ping, stream test_rpc.EchoService_PingPongInfiniteServer) error {
+func (service mockedEchoService) PingPongMultiple(in *test_rpc.Ping, stream test_rpc.EchoService_PingPongMultipleServer) error {
+	for i := 0; i < 10; i++ {
+		err := stream.Send(&test_rpc.Pong{})
+		if err != nil {
+			return fmt.Errorf("could not send pong response in PingPongMultiple handler: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -27,7 +34,7 @@ func (service mockedEchoService) PingPongCount(stream test_rpc.EchoService_PingP
 	return nil
 }
 
-func (service mockedEchoService) PingPongInfiniteCount(stream test_rpc.EchoService_PingPongInfiniteCountServer) error {
+func (service mockedEchoService) PingPongMultipleCount(stream test_rpc.EchoService_PingPongMultipleCountServer) error {
 	return nil
 }
 
@@ -46,7 +53,7 @@ func mockedOnReceiveSdp(db map[string]chan string, key string) func() (string, e
 	}
 }
 
-func NewMockedSignaler() *wrtc.GenericSignaler {
+func newMockedSignaler() *wrtc.GenericSignaler {
 	sdpDatabase := map[string]chan string{
 		"offer":  make(chan string),
 		"answer": make(chan string),
@@ -62,8 +69,8 @@ func NewMockedSignaler() *wrtc.GenericSignaler {
 }
 
 // Test creating a server and send unary requests to it with a client
-func TestServerUnaryRequest(t *testing.T) {
-	mockedSignaler := NewMockedSignaler()
+func setupRpcTest(t *testing.T, clientFunc func(context.Context, test_rpc.EchoServiceClient) error) {
+	mockedSignaler := newMockedSignaler()
 
 	// The connection will be canceled after two seconds
 	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*2)
@@ -117,13 +124,7 @@ func TestServerUnaryRequest(t *testing.T) {
 		}
 
 		client := test_rpc.NewEchoServiceClient(grpcClientConnection)
-		pong, err := client.PingPong(ctx, &test_rpc.Ping{})
-		if err != nil {
-			if pong == nil {
-				err = fmt.Errorf("Invalid pong response: received nil instead of Pong{}")
-			}
-		}
-		clientChan <- err
+		clientChan <- clientFunc(ctx, client)
 	}()
 
 	// Wait for both goroutine to complete and check for errors
@@ -143,4 +144,48 @@ func TestServerUnaryRequest(t *testing.T) {
 			}
 		}
 	}
+}
+
+// Test creating a server and send unary requests to it with a client
+func TestServerUnaryRequest(t *testing.T) {
+	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
+		pong, err := client.PingPong(ctx, &test_rpc.Ping{})
+		if err == nil && pong == nil {
+			err = fmt.Errorf("invalid pong response: received nil instead of Pong{}")
+		}
+
+		return err
+	})
+}
+
+// Test creating a server and send unary requests to it with a client
+func TestServerSideStreamingRequest(t *testing.T) {
+	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
+		stream, err := client.PingPongMultiple(ctx, &test_rpc.Ping{})
+		if err != nil {
+			return err
+		}
+
+		pongCount := 0
+		for {
+			pong, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+
+			if err != nil {
+				return err
+			} else if pong == nil {
+				return fmt.Errorf("invalid pong response: received nil instead of Pong{}")
+			}
+
+			pongCount += 1
+		}
+
+		if pongCount != 10 {
+			return fmt.Errorf("Incorrect number of pong received (%v)", pongCount)
+		}
+
+		return nil
+	})
 }

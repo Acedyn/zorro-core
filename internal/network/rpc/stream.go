@@ -2,19 +2,22 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
 	network_proto "github.com/Acedyn/zorro-proto/gen/protos/network"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type Stream struct {
 	ctx             context.Context
-	cancel          context.CancelFunc
+	cancel          context.CancelCauseFunc
 	proto           *network_proto.Stream
 	pendingMessages chan []byte
 	node            *GrpcOverWrtcNode
@@ -91,7 +94,7 @@ func (stream *Stream) sendResponseMessage(packet any) error {
 		}
 	}
 
-	// Build and send the request proto message
+	// Build and send the response proto message
 	return stream.node.sendFrame(&network_proto.Response{
 		Stream: stream.proto,
 		Type: &network_proto.Response_Message{
@@ -100,6 +103,32 @@ func (stream *Stream) sendResponseMessage(packet any) error {
 					Data: data,
 					Eom:  true,
 				},
+			},
+		},
+	})
+}
+
+// Build and send a response trailer that will end the connection
+func (stream *Stream) sendResponseTrailer(err error) error {
+	// TODO: Find a better way to convert from grpc.status.Status to network_proto.Status
+	status := status.FromContextError(err)
+	statusRaw, err := proto.Marshal(status.Proto())
+	if err != nil {
+		return fmt.Errorf("could not build trailer status: %w", err)
+	}
+
+	statusProto := &network_proto.Status{}
+	err = proto.Unmarshal(statusRaw, statusProto)
+	if err != nil {
+		return fmt.Errorf("could not build trailer status: %w", err)
+	}
+
+	return stream.node.sendFrame(&network_proto.Response{
+		Stream: stream.proto,
+		Type: &network_proto.Response_Trailers{
+			Trailers: &network_proto.ResponseTrailers{
+				Status:   statusProto,
+				Metadata: metadataToProto(stream.trailer),
 			},
 		},
 	})
@@ -120,6 +149,9 @@ func (stream *Stream) storeIncommingMessage(message []byte) error {
 func (stream *Stream) RecvMsg(m any) error {
 	select {
 	case <-stream.ctx.Done():
+		if errors.Is(context.Cause(stream.ctx), io.EOF) {
+			return io.EOF
+		}
 		return fmt.Errorf("message reception canceled: %w", stream.ctx.Err())
 	case msgBytes := <-stream.pendingMessages:
 		return proto.Unmarshal(msgBytes, m.(proto.Message))
@@ -199,4 +231,5 @@ func (s *ClientStream) SendMsg(m any) error { return s.sendRequestMessage(m, fal
 
 type ServerStream struct{ *Stream }
 
-func (s *ServerStream) SendMsg(m any) error { return s.sendResponseMessage(m) }
+func (s *ServerStream) SendMsg(m any) error      { return s.sendResponseMessage(m) }
+func (s *ServerStream) SetTrailer(t metadata.MD) { s.Stream.SetTrailer(t) }
