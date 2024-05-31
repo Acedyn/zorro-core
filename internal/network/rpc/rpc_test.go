@@ -179,7 +179,7 @@ func setupRpcTest(t *testing.T, clientFunc func(context.Context, test_rpc.EchoSe
 }
 
 // Test creating a server and send an unary request to it with a client
-func oldTestServerUnaryRequest(t *testing.T) {
+func TestServerUnaryRequest(t *testing.T) {
 	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
 		pong, err := client.PingPong(ctx, &test_rpc.Ping{})
 		if err == nil && pong == nil {
@@ -191,7 +191,7 @@ func oldTestServerUnaryRequest(t *testing.T) {
 }
 
 // Test creating a server and send a server side streaming request to it with a client
-func oldTestServerSideStreamingRequest(t *testing.T) {
+func TestServerSideStreamingRequest(t *testing.T) {
 	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
 		stream, err := client.PingPongMultiple(ctx, &test_rpc.Ping{})
 		if err != nil {
@@ -223,7 +223,7 @@ func oldTestServerSideStreamingRequest(t *testing.T) {
 }
 
 // Test creating a server and send a client side streaming request to it with a client
-func oldTestClientSideStreamingRequest(t *testing.T) {
+func TestClientSideStreamingRequest(t *testing.T) {
 	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
 		stream, err := client.PingPongCount(ctx)
 		if err != nil {
