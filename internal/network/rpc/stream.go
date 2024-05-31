@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -134,6 +133,11 @@ func (stream *Stream) sendResponseTrailer(err error) error {
 	})
 }
 
+// When we should stop listenning for incomming messages
+func (stream *Stream) closeIncommingMessages() {
+	close(stream.pendingMessages)
+}
+
 // Store a message into the pending messages channel so it can be picked up
 // later using receivedMessage()
 func (stream *Stream) storeIncommingMessage(message []byte) error {
@@ -149,12 +153,13 @@ func (stream *Stream) storeIncommingMessage(message []byte) error {
 func (stream *Stream) RecvMsg(m any) error {
 	select {
 	case <-stream.ctx.Done():
-		if errors.Is(context.Cause(stream.ctx), io.EOF) {
-			return io.EOF
-		}
 		return fmt.Errorf("message reception canceled: %w", stream.ctx.Err())
-	case msgBytes := <-stream.pendingMessages:
-		return proto.Unmarshal(msgBytes, m.(proto.Message))
+	case msgBytes, open := <-stream.pendingMessages:
+		if !open {
+			return io.EOF
+		} else {
+			return proto.Unmarshal(msgBytes, m.(proto.Message))
+		}
 	}
 }
 

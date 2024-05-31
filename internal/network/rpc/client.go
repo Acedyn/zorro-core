@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"io"
 	"sync"
 	"sync/atomic"
 
@@ -26,10 +25,11 @@ func NewClient(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverWrtcOptio
 		streamIDCounter: 0,
 	}
 
-	// Inject the client logic on every messages
+	// Inject the client logic on every messages, the onMessage function
+	// will be called synchronously to make sure the messages a processed in order
 	options = append(options, withDatachannelOptions(&wrtc.DatachannelOptions{
 		OnMessage: func(msg webrtc.DataChannelMessage) {
-			go grpcOverWrtcClient.onMessage(msg)
+			grpcOverWrtcClient.onMessage(msg)
 		},
 	}))
 
@@ -57,7 +57,7 @@ func (client *GrpcOverWrtcClient) Invoke(ctx context.Context, method string, in,
 
 	// Send the message containing the rpc input arg and set the end of stream directly
 	// since this is an unary rpc call
-	err = stream.sendRequestMessage(in, true)
+	err = stream.sendRequestMessage(in, false)
 	if err != nil {
 		return fmt.Errorf("an error occured when writing rpc headers: %w", err)
 	}
@@ -110,7 +110,8 @@ func (client *GrpcOverWrtcClient) NewStream(
 	return &ClientStream{Stream: stream}, err
 }
 
-// Transfer the incomming responses to the appropriate stream
+// Transfer the incomming responses to the appropriate stream. This method
+// must not be called concurently
 func (client *GrpcOverWrtcClient) onMessage(msg webrtc.DataChannelMessage) {
 	response := &network_proto.Response{}
 	err := proto.Unmarshal(msg.Data, response)
@@ -168,7 +169,7 @@ func (client *GrpcOverWrtcClient) onMessage(msg webrtc.DataChannelMessage) {
 		trailerStatus := status.FromProto(statusProto)
 
 		if trailerStatus.Err() == nil {
-			stream.cancel(io.EOF)
+			stream.closeIncommingMessages()
 		} else {
 			stream.cancel(trailerStatus.Err())
 		}

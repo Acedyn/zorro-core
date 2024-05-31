@@ -23,11 +23,10 @@ func NewServer(wrtcConnection *wrtc.WRTCConnection, options ...GrpcOverWrtcOptio
 		services: map[string]*serviceInfo{},
 	}
 
-	// Inject the client logic on every messages
+	// Inject the server logic on every messages, the onMessage function
+	// will be called synchronously to make sure the messages a processed in order
 	options = append(options, withDatachannelOptions(&wrtc.DatachannelOptions{
-		OnMessage: func(msg webrtc.DataChannelMessage) {
-			grpcOverWrtcServer.onMessage(msg)
-		},
+		OnMessage: grpcOverWrtcServer.onMessage,
 	}))
 
 	grpcOverWrtcNode, err := setupGrpcOverWrtc(wrtcConnection, options...)
@@ -183,7 +182,11 @@ func (server *GrpcOverWrtcServer) onMessage(msg webrtc.DataChannelMessage) {
 			}
 		}()
 	case *network_proto.Request_Message:
-		stream.storeIncommingMessage(r.Message.PacketMessage.GetData())
+		if r.Message.Eos {
+			stream.closeIncommingMessages()
+		} else {
+			stream.storeIncommingMessage(r.Message.PacketMessage.GetData())
+		}
 	case *network_proto.Request_RstStream:
 		server.logError("Stream (%+v) canceled", err, stream)
 		return

@@ -31,7 +31,20 @@ func (service mockedEchoService) PingPongMultiple(in *test_rpc.Ping, stream test
 }
 
 func (service mockedEchoService) PingPongCount(stream test_rpc.EchoService_PingPongCountServer) error {
-	return nil
+	pingCount := 0
+
+	for {
+		_, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&test_rpc.Count{
+				Number: int32(pingCount),
+			})
+		} else if err != nil {
+			return err
+		}
+
+		pingCount++
+	}
 }
 
 func (service mockedEchoService) PingPongMultipleCount(stream test_rpc.EchoService_PingPongMultipleCountServer) error {
@@ -146,7 +159,7 @@ func setupRpcTest(t *testing.T, clientFunc func(context.Context, test_rpc.EchoSe
 	}
 }
 
-// Test creating a server and send unary requests to it with a client
+// Test creating a server and send an unary request to it with a client
 func TestServerUnaryRequest(t *testing.T) {
 	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
 		pong, err := client.PingPong(ctx, &test_rpc.Ping{})
@@ -158,7 +171,7 @@ func TestServerUnaryRequest(t *testing.T) {
 	})
 }
 
-// Test creating a server and send unary requests to it with a client
+// Test creating a server and send a server side streaming request to it with a client
 func TestServerSideStreamingRequest(t *testing.T) {
 	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
 		stream, err := client.PingPongMultiple(ctx, &test_rpc.Ping{})
@@ -183,7 +196,35 @@ func TestServerSideStreamingRequest(t *testing.T) {
 		}
 
 		if pongCount != 10 {
-			return fmt.Errorf("Incorrect number of pong received (%v)", pongCount)
+			return fmt.Errorf("incorrect number of pong received (%v)", pongCount)
+		}
+
+		return nil
+	})
+}
+
+// Test creating a server and send a client side streaming request to it with a client
+func TestClientSideStreamingRequest(t *testing.T) {
+	setupRpcTest(t, func(ctx context.Context, client test_rpc.EchoServiceClient) error {
+		stream, err := client.PingPongCount(ctx)
+		if err != nil {
+			return err
+		}
+
+		for i := 0; i < 10; i++ {
+			err = stream.Send(&test_rpc.Ping{})
+			if err != nil {
+				return fmt.Errorf("and error occured when sending ping message: %w", err)
+			}
+		}
+
+		pingCount, err := stream.CloseAndRecv()
+		if err != nil {
+			return fmt.Errorf("error received when closing the stream: %w", err)
+		}
+
+		if pingCount.Number != 10 {
+			return fmt.Errorf("incorrect number of ping counted (%d)", pingCount.Number)
 		}
 
 		return nil
