@@ -1,0 +1,257 @@
+package tools
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	tools_proto "github.com/Acedyn/zorro-proto/gen/protos/tools"
+	"github.com/life4/genesis/maps"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
+)
+
+var SOCKET_SEPARATOR string = ":"
+
+// Wrapped socket with methods attached
+type Socket struct {
+	*tools_proto.Socket
+}
+
+func (socket *Socket) GetSocket() *tools_proto.Socket {
+	if socket.Socket == nil {
+		socket.Socket = &tools_proto.Socket{}
+	}
+	return socket.Socket
+}
+
+// Get the wrapped socket fields with all their methods
+// This method is for accessing the fields, not for editing the map's structure
+func (socket *Socket) GetFields() map[string]*Socket {
+	if socket.GetSocket().GetFields() == nil {
+		return map[string]*Socket{}
+	}
+
+	return maps.Map(
+		socket.GetSocket().GetFields().Fields,
+		func(k string, v *tools_proto.Socket) (string, *Socket) {
+			return k, &Socket{v}
+		},
+	)
+}
+
+// Find a nested field given a path
+func (socket *Socket) GetField(path string) *Socket {
+	splittedPath := strings.Split(strings.Trim(path, TOOL_SEPARATOR), TOOL_SEPARATOR)
+	field, ok := socket.GetFields()[splittedPath[0]]
+	if !ok {
+		return nil
+	} else if len(splittedPath) > 1 {
+		return field.GetField(strings.Join(splittedPath[1:len(splittedPath)-1], TOOL_SEPARATOR))
+	} else {
+		return field
+	}
+}
+
+// Safe setter for the Field field, calling this method on a field with raw value
+// or linked value will replace it with a fields value
+func (socket *Socket) SetField(key string, value *Socket) {
+	if socket.GetSocket().GetFields() == nil {
+		socket.GetSocket().Value = &tools_proto.Socket_Fields{
+			Fields: &tools_proto.SocketFields{
+				Fields: map[string]*tools_proto.Socket{},
+			},
+		}
+	}
+	socket.GetSocket().GetFields().Fields[key] = value.Socket
+}
+
+// Update the socket with a patch
+func (socket *Socket) Update(patch *Socket) bool {
+	// Patch the local version of the socket
+	isPatched := false
+
+	// Update the kind
+	if patch.GetKind() != "" && socket.GetKind() != patch.GetKind() {
+		socket.Kind = patch.GetKind()
+		isPatched = true
+	}
+
+	// Update the value
+	patchFields, isPatchFields := patch.Value.(*tools_proto.Socket_Fields)
+	socketFields, isSocketFields := socket.Value.(*tools_proto.Socket_Fields)
+	if isPatchFields && isSocketFields {
+		// Merge the fields if the patch and the target are fields value
+		maps.Update(socketFields.Fields.Fields, patchFields.Fields.Fields)
+	} else if patch.Value != nil && socket.GetValue() != patch.GetValue() {
+		// Just replace the values for raw or linked values on target
+		socket.Value = patch.GetValue()
+		isPatched = true
+	}
+
+	// Recursively update the socket
+	for fieldName, fieldPatch := range patch.GetFields() {
+		fieldSocket, ok := socket.GetFields()[fieldName]
+		if ok && fieldSocket.Update(fieldPatch) {
+			isPatched = true
+		} else if !ok {
+			socket.SetField(fieldName, fieldPatch)
+		}
+	}
+
+	return isPatched
+}
+
+// Update the socket's value data with a proto message. The proto message is decomposed
+// into fields in the socket recursively until a raw value is reached
+func (socket *Socket) UpdateValueWithMessage(message protoreflect.Message) error {
+	messageDescriptor := message.Descriptor()
+	socket.Kind = string(messageDescriptor.FullName())
+
+	marshalOptions := protojson.MarshalOptions{EmitUnpopulated: true}
+	rawMessage, err := marshalOptions.Marshal(message.Interface())
+	if err != nil {
+		return fmt.Errorf("could not store raw message %s: %w", message, err)
+	}
+
+	// Decompose the value into fields
+	rawFields := map[string]json.RawMessage{}
+	err = json.Unmarshal(rawMessage, &rawFields)
+	if err != nil {
+		return fmt.Errorf("could not decompose message fields: %w", err)
+	}
+
+	// For each field of the message store the value in a new socket
+	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
+		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
+
+		// Here we set the value or the default value if the value is not there
+		fieldSocket := Socket{&tools_proto.Socket{}}
+		if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
+			// For nested messages make this method recursive
+			err = fieldSocket.UpdateValueWithMessage(message.Mutable(fieldDescriptor).Message())
+			if err != nil {
+				return fmt.Errorf("could not update socket field with message: %w", err)
+			}
+		} else {
+			// Store the raw value individualy for value fields
+			rawField, ok := rawFields[fieldDescriptor.JSONName()]
+			if !ok {
+				continue
+			}
+
+			fieldSocket.Update(&Socket{
+				&tools_proto.Socket{
+					Kind: formatFieldDescriptorKind(fieldDescriptor),
+					Value: &tools_proto.Socket_Raw{
+						Raw: rawField,
+					},
+				},
+			})
+		}
+
+		socket.SetField(fieldDescriptor.JSONName(), &fieldSocket)
+	}
+
+	if err != nil {
+		return fmt.Errorf("an error occured when updating a field of socket %s: %w", socket, err)
+	}
+	return nil
+}
+
+// Apply the socket's values to a message
+func (socket *Socket) ApplyFieldsToMessage(message protoreflect.Message, caller TraversableTool) error {
+	messageDescriptor := message.Descriptor()
+	// Gather the values to apply there is two type of values, the one that are applied directly
+	// (jsonPatch) and the ones that will recursively create message fields (nestedSocketPatches)
+	jsonPatch := map[string]json.RawMessage{}
+	nestedSocketPatch := map[*Socket]protoreflect.FieldDescriptor{}
+
+	// Gather all the values for each fields
+	for fieldIndex := 0; fieldIndex < messageDescriptor.Fields().Len(); fieldIndex += 1 {
+		fieldDescriptor := messageDescriptor.Fields().Get(fieldIndex)
+		socketField, ok := socket.GetFields()[fieldDescriptor.JSONName()]
+		if !ok {
+			continue
+		}
+
+		// We must collect the value to apply first and then apply them because if we apply everything
+		// progressively it will override the previously applied values
+		if fieldDescriptor.Message() != nil && !fieldDescriptor.IsMap() && !fieldDescriptor.IsList() {
+			nestedSocketPatch[socketField] = fieldDescriptor
+		} else {
+			socketRawValue, err := socketField.ResolveRawValue(caller)
+			if err != nil {
+				return fmt.Errorf("could not resolve value of socket %s: %w", socket, err)
+			}
+			jsonPatch[fieldDescriptor.JSONName()] = socketRawValue
+		}
+	}
+
+	// We apply the values patch first otherwise we can override the nested fields
+	encodedJsonPatch, err := json.Marshal(jsonPatch)
+	if err != nil {
+		return fmt.Errorf("invalid raw message %s: %w", jsonPatch, err)
+	}
+	err = protojson.Unmarshal(encodedJsonPatch, message.Interface())
+	if err != nil {
+		return fmt.Errorf("an error occured while applying json patch %s on message %s: %w", encodedJsonPatch, message, err)
+	}
+
+	// Apply the nested fields at the end since this won't affect the other fields
+	for socketField, messagePatch := range nestedSocketPatch {
+		socketField.ApplyFieldsToMessage(message.Mutable(messagePatch).Message(), caller)
+	}
+
+	return nil
+}
+
+// Get the value after resolving the links
+func (socket *Socket) ResolveRawValue(parent TraversableTool) ([]byte, error) {
+	switch value := socket.GetValue().(type) {
+	case *tools_proto.Socket_Raw:
+		return socket.GetRaw(), nil
+	case *tools_proto.Socket_Link:
+		if parent == nil {
+			return []byte{}, fmt.Errorf("cannot resolve socket link value without parent")
+		}
+
+		splittedPath := strings.Split(value.Link, SOCKET_SEPARATOR)
+		child, parent := parent.GetChild(splittedPath[0])
+		if child == nil {
+			return []byte{}, fmt.Errorf("could not find child at path \"%s\"", splittedPath[0])
+		}
+
+		childOutput := child.GetBase().GetOutput()
+		if child == parent {
+			childOutput = child.GetBase().GetInput()
+		}
+
+		if len(splittedPath) < 1 {
+			return childOutput.ResolveRawValue(parent)
+		} else {
+			childField := childOutput.GetField(splittedPath[1])
+			if childField == nil {
+				return []byte{}, fmt.Errorf("the child %s does not have a field at path \"%s\"", childOutput, splittedPath[1])
+			} else {
+				return childField.ResolveRawValue(parent)
+			}
+		}
+	default:
+		return []byte{}, nil
+	}
+}
+
+// Build a string representing a field's kind
+func formatFieldDescriptorKind(fieldDescriptor protoreflect.FieldDescriptor) string {
+	kind := fieldDescriptor.Kind().String()
+	if fieldDescriptor.IsMap() {
+		kind = fmt.Sprintf("map[%s]%s", formatFieldDescriptorKind(fieldDescriptor.MapKey()), formatFieldDescriptorKind(fieldDescriptor.MapValue()))
+	} else if fieldDescriptor.IsList() {
+		kind = fmt.Sprintf("[]%s", kind)
+	} else if fieldDescriptor.Kind() == protoreflect.MessageKind {
+		kind = string(fieldDescriptor.Message().FullName())
+	}
+
+	return kind
+}
