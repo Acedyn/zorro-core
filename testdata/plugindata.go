@@ -19,6 +19,9 @@ var testdataPlugins embed.FS
 //go:embed configs
 var testdataConfigs embed.FS
 
+//go:embed processors
+var testdataProcessors embed.FS
+
 // Initialize the in memory file system so it can be tested on both desktop and browser
 func init() {
 	memfs, err := filesystem.GetFileSystem(&filesystem_proto.FileSystemSettings{
@@ -26,11 +29,11 @@ func init() {
 	})
 
 	if err != nil {
-		utils.Logger().Error("Could initialize test data in mem fs:\n\t%s", err)
+		utils.Logger().Error("Could not initialize test data in mem fs:\n\t%s", err)
 		return
 	}
 
-	for _, testdata := range []embed.FS{testdataPlugins, testdataConfigs} {
+	for _, testdata := range []embed.FS{testdataPlugins, testdataConfigs, testdataProcessors} {
 		// Copy all the files and folders one by one
 		err = fs.WalkDir(testdata, ".", func(path string, f os.DirEntry, _ error) error {
 			if f.IsDir() {

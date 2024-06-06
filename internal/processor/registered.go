@@ -12,8 +12,6 @@ import (
 // Registered processors are ready to receive command requests
 type RegisteredProcessor struct {
 	*scheduling_proto.Processor
-	// The host to connect to send commands
-	Host string
 	// Commands waiting to be scheduled
 	commandQueue chan *tools.Command
 	// Commands scheduled and still running on the client side

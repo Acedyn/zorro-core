@@ -18,7 +18,6 @@ type ProcessorPool struct {
 // Register the given client to the client pool
 func (pool *ProcessorPool) RegisterProcessor(
 	processorToRegister *scheduling_proto.Processor,
-	host string,
 	client *rpc.GrpcOverWrtcClient,
 ) *RegisteredProcessor {
 	// Check if the client is already registered
@@ -28,7 +27,6 @@ func (pool *ProcessorPool) RegisterProcessor(
 	if !ok {
 		registeredProcessor = &RegisteredProcessor{
 			Processor:           processorToRegister,
-			Host:                host,
 			commandQueue:        make(chan *tools.Command),
 			runningCommands:     map[string]*tools.Command{},
 			runningCommandsLock: &sync.Mutex{},
@@ -41,7 +39,7 @@ func (pool *ProcessorPool) RegisterProcessor(
 }
 
 // Look among the already registered clients and return the first matching client
-func (pool *ProcessorPool) findRegisteredProcessor(query *ProcessorQuery) *RegisteredProcessor {
+func (pool *ProcessorPool) FindRegisteredProcessor(query *ProcessorQuery) *RegisteredProcessor {
 	pool.registeredMutex.Lock()
 	defer pool.registeredMutex.Unlock()
 

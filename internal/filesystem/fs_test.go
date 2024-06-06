@@ -7,7 +7,7 @@ import (
 )
 
 // Testing the file system getter with the in memory file system config twice with the same config
-func TestGetMemoryFileSystem(t *testing.T) {
+func TestGetSameMemoryFileSystem(t *testing.T) {
 	memfs, err := GetFileSystem(&filesystem_proto.FileSystemSettings{
 		FileSystemSettings: &filesystem_proto.FileSystemSettings_Memory{},
 	})
@@ -34,7 +34,7 @@ func TestGetMemoryFileSystem(t *testing.T) {
 }
 
 // Testing the file system getter with the in memory file system config twice with a different config
-func TestGetOsFileSystem(t *testing.T) {
+func TestGetDifferentMemoryFileSystem(t *testing.T) {
 	memfs, err := GetFileSystem(&filesystem_proto.FileSystemSettings{
 		FileSystemSettings: &filesystem_proto.FileSystemSettings_Memory{},
 	})
