@@ -3,7 +3,7 @@ module github.com/Acedyn/zorro-core
 go 1.21.3
 
 require (
-	github.com/Acedyn/zorro-proto v0.0.0-20240606124416-423592590bd3
+	github.com/Acedyn/zorro-proto v0.0.0-20240723165650-470ee003156e
 	github.com/hack-pad/hackpadfs v0.2.1
 	github.com/life4/genesis v1.10.2
 	github.com/pion/webrtc/v4 v4.0.0-beta.17

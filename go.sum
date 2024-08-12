@@ -2,6 +2,8 @@ github.com/Acedyn/zorro-proto v0.0.0-20240430124212-1ca66a5366e0 h1:BlfbNWFHlhUW
 github.com/Acedyn/zorro-proto v0.0.0-20240430124212-1ca66a5366e0/go.mod h1:nPVhUCRkOeO0UVn/ZbTmuAUMT7G5hDfkpvzD8tzYHYI=
 github.com/Acedyn/zorro-proto v0.0.0-20240606124416-423592590bd3 h1:/KbD9gBRiTAbiwxpR9mY666O47qVcqoxDct6fcod4oE=
 github.com/Acedyn/zorro-proto v0.0.0-20240606124416-423592590bd3/go.mod h1:nPVhUCRkOeO0UVn/ZbTmuAUMT7G5hDfkpvzD8tzYHYI=
+github.com/Acedyn/zorro-proto v0.0.0-20240723165650-470ee003156e h1:nJm8lQZH2FKJunX3fxHAdKm99ZThh1TUIiUpoHGGn3Y=
+github.com/Acedyn/zorro-proto v0.0.0-20240723165650-470ee003156e/go.mod h1:nPVhUCRkOeO0UVn/ZbTmuAUMT7G5hDfkpvzD8tzYHYI=
 github.com/bufbuild/protocompile v0.13.0 h1:6cwUB0Y2tSvmNxsbunwzmIto3xOlJOV7ALALuVOs92M=
 github.com/bufbuild/protocompile v0.13.0/go.mod h1:dr++fGGeMPWHv7jPeT06ZKukm45NJscd7rUxQVzEKRk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

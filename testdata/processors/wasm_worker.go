@@ -1,14 +1,16 @@
+//go:build js && wasm
+
 package main
 
 import (
+	"fmt"
 	"syscall/js"
 )
 
 func main() {
+	fmt.Println("hello")
 	js.Global().Get("self").Set("onmessage", js.FuncOf(func(this js.Value, args []js.Value) any {
-		js.Global().Get("self").Call("postMessage", "pong")
+		js.Global().Call("postMessage", "pong")
 		return nil
 	}))
-
-	<-make(chan struct{}, 0)
 }

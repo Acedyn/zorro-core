@@ -24,7 +24,7 @@ func mockedOnReceiveSdp(db map[string]chan string, key string) func() (string, e
 	}
 }
 
-func NewMockedSignaler() *GenericSignaler {
+func newMockedSignaler() *GenericSignaler {
 	sdpDatabase := map[string]chan string{
 		"offer":  make(chan string),
 		"answer": make(chan string),
@@ -42,7 +42,7 @@ func NewMockedSignaler() *GenericSignaler {
 // Test the connection between an answerer and an offerer
 // in two different goroutines
 func TestConnectionAsOffererAndAnswerer(t *testing.T) {
-	mockedSignaler := NewMockedSignaler()
+	mockedSignaler := newMockedSignaler()
 
 	// The connection will be canceled after two seconds
 	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*2)
@@ -58,7 +58,7 @@ func TestConnectionAsOffererAndAnswerer(t *testing.T) {
 		connection, err := NewConnectionAsOfferer(
 			WithSignalerWRTCOption(mockedSignaler),
 			WithContextWRTCOption(ctx),
-			WithMainChannelWRTCOption(DatachannelOptions{
+			WithDefaultChannelWRTCOption(DatachannelOptions{
 				OnMessage: func(msg webrtc.DataChannelMessage) {
 					messageChan <- string(msg.Data)
 				},
@@ -94,7 +94,7 @@ func TestConnectionAsOffererAndAnswerer(t *testing.T) {
 		connection, err := NewConnectionAsAnswerer(
 			WithSignalerWRTCOption(mockedSignaler),
 			WithContextWRTCOption(ctx),
-			WithMainChannelWRTCOption(DatachannelOptions{
+			WithDefaultChannelWRTCOption(DatachannelOptions{
 				OnMessage: func(msg webrtc.DataChannelMessage) {
 					messageChan <- string(msg.Data)
 				},
@@ -147,7 +147,7 @@ func TestDatachannelCreation(t *testing.T) {
 	offererMessage := "hello"
 	answererMessage := "world"
 
-	mockedSignaler := NewMockedSignaler()
+	mockedSignaler := newMockedSignaler()
 
 	// The connection will be canceled after two seconds
 	ctx, cancelContext := context.WithTimeout(context.Background(), time.Second*2)

@@ -50,7 +50,7 @@ func WithContextWRTCOption(ctx context.Context) WRTCOption {
 }
 
 // Hook and options for the default datachannel of the connection
-func WithMainChannelWRTCOption(mainChannelOptions DatachannelOptions) WRTCOption {
+func WithDefaultChannelWRTCOption(mainChannelOptions DatachannelOptions) WRTCOption {
 	return func(options *WRTCOptions) {
 		options.mainChannel = mainChannelOptions
 	}
@@ -67,7 +67,7 @@ type WRTCConnection struct {
 	pendingNewDatachannelsMutex sync.Mutex
 }
 
-var mainDatachannelName = "main"
+var defaultDatachannelName = "default"
 
 func newConnection(options ...WRTCOption) (*WRTCConnection, error) {
 	wrtcOptions := DefaultWRTCOptions
@@ -111,7 +111,7 @@ func (wrtcConnection *WRTCConnection) HandleNewDatachannel(datachannel *webrtc.D
 
 // Create a datachannel and wait for the other peer to pick up
 func (wrtcConnection *WRTCConnection) CreateDatachannel(ctx context.Context, label string, options DatachannelOptions) (*webrtc.DataChannel, error) {
-	if label == mainDatachannelName {
+	if label == defaultDatachannelName {
 		return nil, fmt.Errorf("label %s is reserved for the connection's main datachannel", label)
 	}
 
@@ -144,7 +144,7 @@ func (wrtcConnection *WRTCConnection) CreateDatachannel(ctx context.Context, lab
 
 // Wait for the peer to create a datachannel and pick it up
 func (wrtcConnection *WRTCConnection) ReceiveDatachannel(ctx context.Context, label string, options DatachannelOptions) (*webrtc.DataChannel, error) {
-	if label == mainDatachannelName {
+	if label == defaultDatachannelName {
 		return nil, fmt.Errorf("label %s is reserved for the connection's main datachannel", label)
 	}
 
@@ -194,7 +194,7 @@ func NewConnectionAsOfferer(options ...WRTCOption) (*WRTCConnection, error) {
 
 	// Initialize the connection in a separate goroutine so we can cancel it
 	go func() {
-		datachannel, err := wrtcConnection.connection.CreateDataChannel(mainDatachannelName, nil)
+		datachannel, err := wrtcConnection.connection.CreateDataChannel(defaultDatachannelName, nil)
 		if err != nil {
 			wrtcConnection.ready <- fmt.Errorf("an error occured while creating datachannel: %w", err)
 			return
@@ -245,7 +245,7 @@ func NewConnectionAsAnswerer(options ...WRTCOption) (*WRTCConnection, error) {
 	wrtcConnection.connection.OnDataChannel(func(datachannel *webrtc.DataChannel) {
 		label := datachannel.Label()
 		// Different handlers for the main channel and the other ones
-		if label == mainDatachannelName {
+		if label == defaultDatachannelName {
 			wrtcConnection.datachannel = datachannel
 
 			// OnOpen triggers when the datachannel connection is established

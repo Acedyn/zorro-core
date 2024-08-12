@@ -113,7 +113,12 @@ self.onmessage = async (event) => {
         
 
       default:
-        break;
+        self.postMessage({
+          procedure: "ERROR",
+          args: {
+            exception: `Unknown procedure: ${procedure}`
+          }
+        })
     }
   } catch (e) {
     self.postMessage({
